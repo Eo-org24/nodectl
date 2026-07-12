@@ -1,0 +1,21 @@
+<section
+    class="command-result space-y-2 font-mono"
+    role="{{ 'alert' if return_code else 'status' }}"
+    aria-live="polite"
+>
+    {% if command %}
+        <div class="text-gray-400 font-bold">$ {{ command }}</div>
+    {% endif %}
+    {% if stdout %}
+        <pre class="text-gray-300 whitespace-pre-wrap break-words">{{ stdout }}</pre>
+    {% endif %}
+    {% if stderr %}
+        <pre class="text-red-400 whitespace-pre-wrap break-words">{{ stderr }}</pre>
+    {% endif %}
+    <div class="border-t border-gray-800 pt-1 mt-2 text-xs font-bold {{ 'text-red-400' if return_code else 'text-green-400' }}">
+        Execution status: {{ 'FAILED (exit code: ' ~ return_code ~ ')' if return_code else 'SUCCESS' }}
+    </div>
+    {% if retry_form %}
+        {{ retry_form | safe }}
+    {% endif %}
+</section>

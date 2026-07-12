@@ -1,0 +1,24 @@
+{
+  "v": 1,
+  "generated": "2026-07-10T12:00:00Z",
+  "scripts": [
+    {
+      "path": "scripts/approved/tailscale-node-join.sh",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "review": "approved",
+      "risk_flags": ["network", "modifies-firewall"]
+    },
+    {
+      "path": "scripts/approved/manifest-tool.sh",
+      "sha256": "21b55dd5f3dc8e1c7574a208cb31c6b7759002a11348ace8388aa395817e4eac",
+      "review": "approved",
+      "risk_flags": []
+    },
+    {
+      "path": "scripts/drafts/experimental-gpu-check.sh",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "review": "draft",
+      "risk_flags": []
+    }
+  ]
+}
