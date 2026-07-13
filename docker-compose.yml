@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  nodepanel:
+    build:
+      context: .
+    env_file:
+      - .env
+    environment:
+      DATA_ROOT: /app/data
+      STAGING_ROOT: /app/staging
+      INBOX_ROOT: /app/inbox
+      LEDGER_ROOT: /app/ledger
+      DATABASE_PATH: /app/data/nodepanel.db
+      SSH_KNOWN_HOSTS_PATH: /app/data/known_hosts
+      FACTORY_SSH_KEY_PATH: /run/secrets/factory_ssh_key
+      VM_SSH_KEY_PATH: /run/secrets/vm_ssh_key
+      BIND_HOST: 0.0.0.0
+      BIND_PORT: 420
+    ports:
+      - "127.0.0.1:${NODEPANEL_HOST_PORT:-8000}:420"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    volumes:
+      - ./data:/app/data
+      - ./staging:/app/staging
+      - ./inbox:/app/inbox
+      - ./ledger:/app/ledger
+    secrets:
+      - factory_ssh_key
+      - vm_ssh_key
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:420/healthz', timeout=3).read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+secrets:
+  factory_ssh_key:
+    file: ./secrets/factory_ssh_key
+  vm_ssh_key:
+    file: ./secrets/vm_ssh_key
