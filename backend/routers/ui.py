@@ -8,12 +8,8 @@ from fastapi.templating import Jinja2Templates
 
 from ..auth import LoginPassword, LoginUsername, clear_session, configured_users, issue_session, read_session, require_csrf, require_user
 from ..config import settings
-<<<<<<< HEAD
-from ..ssh_client import get_node_manifests
-=======
 from ..db import get_db
 from ..ledger import read_entries
->>>>>>> 86f1655 (feat: restore readonly tab shell and harden runtime checks)
 
 
 templates = Jinja2Templates(directory="templates")
@@ -35,21 +31,21 @@ def tab_context(request: Request, active_tab: str) -> dict[str, object]:
     context = template_context(request, active_tab=active_tab, read_only=True)
     user = context["session_user"]
     target_id = user.terminal_target if user else "factory"
+    snapshot = request.app.state.factory_service.hypervisor_snapshot()
     context.update(
         {
             "nodes": request.app.state.factory_service.list_nodes(),
             "creds": load_repo_credentials(),
             "entries": load_ledger_entries(),
             "files": list_staging_files(),
+            "vms": snapshot.vms,
+            "error_msg": snapshot.error,
             "vm_ssh_user": settings.factory_user,
             "vm_ssh_key_path": settings.vm_ssh_key_path,
             "current_target_type": "host" if target_id == "factory" else "vm",
             "current_target_name": "factory" if target_id == "factory" else target_id,
         }
     )
-    snapshot = request.app.state.factory_service.hypervisor_snapshot()
-    context["vms"] = snapshot.vms
-    context["error_msg"] = snapshot.error
     return context
 
 
@@ -57,13 +53,8 @@ def list_staging_files() -> list[dict[str, object]]:
     files: list[dict[str, object]] = []
     for path in sorted(settings.staging_root.rglob("*")):
         if path.is_file():
-            files.append(
-                {
-                    "name": path.relative_to(settings.staging_root).as_posix(),
-                    "url_name": path.relative_to(settings.staging_root).as_posix(),
-                    "size": path.stat().st_size,
-                }
-            )
+            rel_path = path.relative_to(settings.staging_root).as_posix()
+            files.append({"name": rel_path, "url_name": rel_path, "size": path.stat().st_size})
     return files
 
 
@@ -114,17 +105,18 @@ async def login_page(request: Request) -> HTMLResponse:
 async def login(request: Request, response: Response, username: LoginUsername, password: LoginPassword):
     users = configured_users(settings)
     candidate = users.get(username)
-    
+
     is_valid = False
     if candidate is not None:
         try:
             import pam
-            p = pam.pam()
-            if p.authenticate(username, password):
+
+            pam_client = pam.pam()
+            if pam_client.authenticate(username, password):
                 is_valid = True
         except ImportError:
             pass
-            
+
         if not is_valid and candidate.password == password:
             is_valid = True
 
@@ -135,6 +127,7 @@ async def login(request: Request, response: Response, username: LoginUsername, p
             template_context(request, error="Invalid username or password."),
             status_code=401,
         )
+
     issue_session(response, candidate, settings)
     response.status_code = 303
     response.headers["Location"] = "/"
@@ -154,26 +147,17 @@ async def home(request: Request):
     user = read_session(request)
     if user is None:
         return RedirectResponse("/login", status_code=303)
-<<<<<<< HEAD
-    nodes = await get_node_manifests()
     return templates.TemplateResponse(
         request,
         "index.html",
-        template_context(
-            request,
-            title=settings.app_name,
-            user=user,
-            nodes=nodes,
-            factory_host=settings.factory_host,
-            factory_port=settings.factory_port,
-            factory_user=settings.factory_user,
-        ),
-    )
-=======
-    return templates.TemplateResponse(
-        request,
-        "index.html",
-        tab_context(request, active_tab="dashboard") | {"title": settings.app_name, "user": user},
+        tab_context(request, active_tab="dashboard")
+        | {
+            "title": settings.app_name,
+            "user": user,
+            "factory_host": settings.factory_host,
+            "factory_port": settings.factory_port,
+            "factory_user": settings.factory_user,
+        },
     )
 
 
@@ -200,4 +184,3 @@ async def tab_ledger(request: Request, user=Depends(require_user)):
 @router.get("/tab/config", response_class=HTMLResponse)
 async def tab_config(request: Request, user=Depends(require_user)):
     return templates.TemplateResponse(request, "config_tab.html", tab_context(request, active_tab="config"))
->>>>>>> 86f1655 (feat: restore readonly tab shell and harden runtime checks)

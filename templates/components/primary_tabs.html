@@ -1,4 +1,4 @@
-<div id="primary-tabs" class="flex gap-2 border-b border-[#9d00ff] pb-2" role="tablist" {% if request.headers.get('hx-request') %}hx-swap-oob="true"{% endif %}>
+<div id="primary-tabs" class="tab-strip" role="tablist" {% if request.headers.get('hx-request') %}hx-swap-oob="true"{% endif %}>
     <a
         href="/tab/dashboard"
         hx-get="/tab/dashboard"
@@ -6,7 +6,7 @@
         hx-push-url="/tab/dashboard"
         role="tab"
         aria-selected="{{ 'true' if active_tab == 'dashboard' else 'false' }}"
-        class="px-4 py-2 text-sm font-bold uppercase tracking-wider border {{ 'border-[#ff00ff] text-[#ff00ff] bg-[rgba(255,0,255,0.05)] shadow-[0_0_8px_rgba(255,0,255,0.25)]' if active_tab == 'dashboard' else 'border-transparent text-[#9d00ff] hover:text-[#ff00ff]' }}">
+        class="chrome-tab{% if active_tab == 'dashboard' %} is-active{% endif %}">
         Dashboard
     </a>
     <a
@@ -16,7 +16,7 @@
         hx-push-url="/tab/files"
         role="tab"
         aria-selected="{{ 'true' if active_tab == 'files' else 'false' }}"
-        class="px-4 py-2 text-sm font-bold uppercase tracking-wider border {{ 'border-[#ff00ff] text-[#ff00ff] bg-[rgba(255,0,255,0.05)] shadow-[0_0_8px_rgba(255,0,255,0.25)]' if active_tab == 'files' else 'border-transparent text-[#9d00ff] hover:text-[#ff00ff]' }}">
+        class="chrome-tab{% if active_tab == 'files' %} is-active{% endif %}">
         Files
     </a>
     <a
@@ -26,7 +26,7 @@
         hx-push-url="/tab/repos"
         role="tab"
         aria-selected="{{ 'true' if active_tab == 'repos' else 'false' }}"
-        class="px-4 py-2 text-sm font-bold uppercase tracking-wider border {{ 'border-[#ff00ff] text-[#ff00ff] bg-[rgba(255,0,255,0.05)] shadow-[0_0_8px_rgba(255,0,255,0.25)]' if active_tab == 'repos' else 'border-transparent text-[#9d00ff] hover:text-[#ff00ff]' }}">
+        class="chrome-tab{% if active_tab == 'repos' %} is-active{% endif %}">
         Repos
     </a>
     <a
@@ -36,7 +36,7 @@
         hx-push-url="/tab/ledger"
         role="tab"
         aria-selected="{{ 'true' if active_tab == 'ledger' else 'false' }}"
-        class="px-4 py-2 text-sm font-bold uppercase tracking-wider border {{ 'border-[#ff00ff] text-[#ff00ff] bg-[rgba(255,0,255,0.05)] shadow-[0_0_8px_rgba(255,0,255,0.25)]' if active_tab == 'ledger' else 'border-transparent text-[#9d00ff] hover:text-[#ff00ff]' }}">
+        class="chrome-tab{% if active_tab == 'ledger' %} is-active{% endif %}">
         Ledger
     </a>
     <a
@@ -46,7 +46,7 @@
         hx-push-url="/tab/config"
         role="tab"
         aria-selected="{{ 'true' if active_tab == 'config' else 'false' }}"
-        class="px-4 py-2 text-sm font-bold uppercase tracking-wider border {{ 'border-[#ff00ff] text-[#ff00ff] bg-[rgba(255,0,255,0.05)] shadow-[0_0_8px_rgba(255,0,255,0.25)]' if active_tab == 'config' else 'border-transparent text-[#9d00ff] hover:text-[#ff00ff]' }}">
+        class="chrome-tab{% if active_tab == 'config' %} is-active{% endif %}">
         Config
     </a>
 </div>

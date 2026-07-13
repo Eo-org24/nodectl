@@ -1,13 +1,29 @@
 {% extends "base.html" %}
 {% block body %}
-<main class="dashboard-shell space-y-8">
-    <header class="hero-panel">
-        <div>
-            <p class="eyebrow">NodePanel // factory control plane</p>
-            <h1 class="hero-title">{{ title }}</h1>
-            <p class="hero-copy">
-                Manifest state comes from remote `node.yaml` files. Hypervisor state comes from `virsh list --all`.
-            </p>
+<main class="dashboard-shell space-y-8 panel-reveal">
+    <header class="hero-panel hero-grid">
+        <div class="space-y-5">
+            <div>
+                <p class="eyebrow">NodePanel // factory control plane</p>
+                <h1 class="hero-title">{{ title }}</h1>
+                <p class="hero-copy">
+                    Manifest state comes from remote <code>node.yaml</code> files. Hypervisor state comes from <code>virsh list --all</code>.
+                </p>
+            </div>
+            <div class="hero-metrics">
+                <div class="metric-chip">
+                    <span class="metric-label">Target Host</span>
+                    <span class="metric-value">{{ factory_host }}</span>
+                </div>
+                <div class="metric-chip">
+                    <span class="metric-label">SSH</span>
+                    <span class="metric-value">{{ factory_user }}:{{ factory_port }}</span>
+                </div>
+                <div class="metric-chip">
+                    <span class="metric-label">Mode</span>
+                    <span class="metric-value">Read Only</span>
+                </div>
+            </div>
         </div>
         <div class="hero-actions">
             <div class="status-chip">
@@ -21,8 +37,8 @@
         </div>
     </header>
 
-    <section class="cockpit-grid">
-        <article class="chrome-panel">
+    <section class="cockpit-grid wide-gap">
+        <article class="chrome-panel panel-lift">
             <p class="panel-kicker">Factory target</p>
             <h2 class="panel-title">Remote control host</h2>
             <dl class="data-stack">
@@ -33,92 +49,23 @@
             </dl>
         </article>
 
-        <article class="chrome-panel">
+        <article class="chrome-panel panel-lift">
             <p class="panel-kicker">State model</p>
             <h2 class="panel-title">Drift visibility</h2>
             <ul class="bullet-matrix">
                 <li>Factory state is parsed from manifests on the remote host.</li>
                 <li>Hypervisor state is queried live from libvirt.</li>
-                <li>The browser only renders HTML snippets returned by FastAPI.</li>
-                <li>Node actions stream stdout and stderr directly into the terminal panel.</li>
+                <li>The browser is a thin surface over FastAPI and htmx swaps.</li>
+                <li>This carry-forward phase keeps destructive workflows disabled.</li>
             </ul>
         </article>
     </section>
 
-    <section class="terminal-card p-6 space-y-5">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[#9d00ff] pb-3">
-            <div>
-                <p class="panel-kicker">Factory state</p>
-                <h2 class="panel-title">Active node manifests</h2>
-            </div>
-            <button hx-get="/api/nodes" hx-target="#node-list" class="btn-terminal text-xs px-3 py-1.5 uppercase font-bold tracking-wide">
-                Refresh manifests
-            </button>
-        </div>
-        <div id="node-list" class="space-y-4" hx-get="/api/nodes" hx-trigger="load, every 10s" hx-sync="this:replace">
-            {% include "nodes_list.html" %}
-        </div>
-    </section>
-
-    <section class="terminal-card p-6 space-y-5">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[#9d00ff] pb-3">
-            <div>
-                <p class="panel-kicker">Hypervisor state</p>
-                <h2 class="panel-title">Ground truth from libvirt</h2>
-            </div>
-            <button hx-get="/api/hypervisor/vms" hx-target="#hypervisor-output" class="btn-terminal text-xs px-3 py-1.5 uppercase font-bold tracking-wide">
-                Run `virsh list`
-            </button>
-        </div>
-        <div id="hypervisor-output" class="min-h-[6rem] text-sm text-[#9d00ff]" hx-get="/api/hypervisor/vms" hx-trigger="load">
-            <p class="font-mono">Querying hypervisor…</p>
-        </div>
-    </section>
-
-    <section class="terminal-card p-6 space-y-4">
-        <div class="border-b border-[#9d00ff] pb-3">
-            <p class="panel-kicker">Command output</p>
-            <h2 class="panel-title">Factory action terminal</h2>
-        </div>
-        <div id="terminal-output" class="bg-[#0a001a] border border-[#9d00ff] p-4 text-xs text-[#ff00ff] min-h-[8rem] overflow-auto">
-            <p class="font-mono text-[#9d00ff]">Select a node action to stream the remote command result here.</p>
+    <section class="chrome-stage panel-reveal">
+        {% include "components/primary_tabs.html" %}
+        <div id="tab-content" class="tab-stage">
+            {% include "dashboard_tab.html" %}
         </div>
     </section>
 </main>
-<<<<<<< HEAD
-=======
-<section class="dashboard-shell mt-8">
-    {% include "components/primary_tabs.html" %}
-    <div id="tab-content" class="mt-6">
-        {% include "dashboard_tab.html" %}
-    </div>
-</section>
-<script>
-    const output = document.getElementById("terminal-output");
-    const badge = document.getElementById("terminal-badge");
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const socket = new WebSocket(`${protocol}//${window.location.host}/api/terminal/ws`);
-
-    socket.onopen = () => {
-        badge.textContent = "connected";
-        badge.classList.remove("muted");
-        output.textContent += "[socket online]\n";
-    };
-
-    socket.onmessage = (event) => {
-        output.textContent += event.data;
-    };
-
-    socket.onerror = () => {
-        badge.textContent = "error";
-        badge.classList.add("muted");
-    };
-
-    socket.onclose = () => {
-        badge.textContent = "closed";
-        badge.classList.add("muted");
-        output.textContent += "\n[socket closed]";
-    };
-</script>
->>>>>>> 86f1655 (feat: restore readonly tab shell and harden runtime checks)
 {% endblock %}
