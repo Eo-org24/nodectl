@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block body %}
+<main class="dashboard-shell space-y-8 panel-reveal">
+    <header class="hero-panel hero-grid">
+        <div class="space-y-5">
+            <div>
+                <p class="eyebrow">NodePanel // factory control plane</p>
+                <h1 class="hero-title">{{ title }}</h1>
+                <p class="hero-copy">
+                    Manifest state comes from remote <code>node.yaml</code> files. Hypervisor state comes from <code>virsh list --all</code>.
+                </p>
+            </div>
+            <div class="hero-metrics">
+                <div class="metric-chip">
+                    <span class="metric-label">Target Host</span>
+                    <span class="metric-value">{{ factory_host }}</span>
+                </div>
+                <div class="metric-chip">
+                    <span class="metric-label">SSH</span>
+                    <span class="metric-value">{{ factory_user }}:{{ factory_port }}</span>
+                </div>
+                <div class="metric-chip">
+                    <span class="metric-label">Mode</span>
+                    <span class="metric-value">Read Only</span>
+                </div>
+            </div>
+        </div>
+        <div class="hero-actions">
+            <div class="status-chip">
+                <span class="status-dot"></span>
+                Signed in as {{ user.username }} / {{ user.role }}
+            </div>
+            <form method="post" action="/logout">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="chrome-button" type="submit">Log out</button>
+            </form>
+        </div>
+    </header>
+
+    <section class="cockpit-grid wide-gap">
+        <article class="chrome-panel panel-lift">
+            <p class="panel-kicker">Factory target</p>
+            <h2 class="panel-title">Remote control host</h2>
+            <dl class="data-stack">
+                <div class="data-row"><dt>Host</dt><dd>{{ factory_host }}</dd></div>
+                <div class="data-row"><dt>Port</dt><dd>{{ factory_port }}</dd></div>
+                <div class="data-row"><dt>User</dt><dd>{{ factory_user }}</dd></div>
+                <div class="data-row"><dt>Factory dir</dt><dd>~/nodefactory</dd></div>
+            </dl>
+        </article>
+
+        <article class="chrome-panel panel-lift">
+            <p class="panel-kicker">State model</p>
+            <h2 class="panel-title">Drift visibility</h2>
+            <ul class="bullet-matrix">
+                <li>Factory state is parsed from manifests on the remote host.</li>
+                <li>Hypervisor state is queried live from libvirt.</li>
+                <li>The browser is a thin surface over FastAPI and htmx swaps.</li>
+                <li>This carry-forward phase keeps destructive workflows disabled.</li>
+            </ul>
+        </article>
+    </section>
+
+    <section class="chrome-stage panel-reveal">
+        {% include "components/primary_tabs.html" %}
+        <div id="tab-content" class="tab-stage">
+            {% include "dashboard_tab.html" %}
+        </div>
+    </section>
+</main>
+{% endblock %}

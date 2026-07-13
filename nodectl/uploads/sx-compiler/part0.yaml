@@ -1,0 +1,75 @@
+inference_mode: api
+
+page_body_cap_tokens: 1200
+legacy_page_segmentation_trigger_tokens: 6000
+chunk_size_tokens:
+  min: 400
+  max: 800
+  recursive_paragraph_split_above: 1000
+r2_merge_threshold_cosine: 0.80
+r3_branch_band_cosine:
+  min: 0.60
+  max: 0.80
+rrf_smoothing_k: 60
+bm25_column_weights:
+  title: 4.0
+  heading: 3.0
+  body: 1.0
+retrieval_top_k:
+  fts: 12
+  vector: 12
+fused_candidates_kept: 6
+neighbor_stubs:
+  local_max: 20
+  frontier_max: 40
+context_pack_budget_tokens:
+  local: 6500
+  frontier: 12000
+outbound_link_quota_min: 2
+retry_count_before_escalate_or_quarantine: 1
+brute_force_vector_ceiling_chunks: 5000
+bootstrap_conservatism: create_page_when_uncertain
+residual_recursion_depth: 1
+residual_recursion_depth_max: 2
+genericity_df_threshold: 0.08
+identifier_denylist:
+  - dag
+  - router
+  - queue
+  - cache
+  - compiler
+nomination_hubs:
+  - architecture
+  - patterns
+  - incidents
+  - glossary
+summary_length_cap_chars: 160
+m3_correction_time_tolerance_minutes: 15
+log_rotation: yearly
+chunking_policy: structural-first
+
+api:
+  provider: deepseek
+  model: deepseek-v4-pro
+  retention_tier: standard
+  max_cost_per_batch_usd: 5.00
+  max_cost_per_unit_warn_usd: 0.25
+
+ingest:
+  skip:
+    - "*.canvas"
+    - "attachments/"
+    - "Attachments/"
+    - "*.png"
+    - "*.jpg"
+    - "*.jpeg"
+    - "*.gif"
+    - "*.webp"
+    - "*.pdf"
+    - "*.zip"
+    - "*.sqlite"
+  source_origin:
+    default: self
+    allowed:
+      - self
+      - third_party

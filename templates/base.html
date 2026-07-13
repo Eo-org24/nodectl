@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title or "NodePanel" }}</title>
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss:; img-src 'self' data:;">
+    <link rel="stylesheet" href="/static/output.css">
+    <link rel="stylesheet" href="/static/vapor.css">
+    <script src="/static/vendor/htmx.min.js"></script>
+</head>
+<body class="vapor-body">
+    <div class="vapor-sun"></div>
+    <div class="vapor-grid"></div>
+    <div class="vapor-noise"></div>
+    <div class="vapor-shell">
+        {% block body %}{% endblock %}
+    </div>
+    <script>
+        document.body.addEventListener("htmx:configRequest", function (event) {
+            const token = document.querySelector('meta[name="csrf-token"]')?.content;
+            if (token) {
+                event.detail.headers["X-CSRF-Token"] = token;
+            }
+        });
+    </script>
+</body>
+</html>

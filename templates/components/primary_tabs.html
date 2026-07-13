@@ -1,0 +1,52 @@
+<div id="primary-tabs" class="tab-strip" role="tablist" {% if request.headers.get('hx-request') %}hx-swap-oob="true"{% endif %}>
+    <a
+        href="/tab/dashboard"
+        hx-get="/tab/dashboard"
+        hx-target="#tab-content"
+        hx-push-url="/tab/dashboard"
+        role="tab"
+        aria-selected="{{ 'true' if active_tab == 'dashboard' else 'false' }}"
+        class="chrome-tab{% if active_tab == 'dashboard' %} is-active{% endif %}">
+        Dashboard
+    </a>
+    <a
+        href="/tab/files"
+        hx-get="/tab/files"
+        hx-target="#tab-content"
+        hx-push-url="/tab/files"
+        role="tab"
+        aria-selected="{{ 'true' if active_tab == 'files' else 'false' }}"
+        class="chrome-tab{% if active_tab == 'files' %} is-active{% endif %}">
+        Files
+    </a>
+    <a
+        href="/tab/repos"
+        hx-get="/tab/repos"
+        hx-target="#tab-content"
+        hx-push-url="/tab/repos"
+        role="tab"
+        aria-selected="{{ 'true' if active_tab == 'repos' else 'false' }}"
+        class="chrome-tab{% if active_tab == 'repos' %} is-active{% endif %}">
+        Repos
+    </a>
+    <a
+        href="/tab/ledger"
+        hx-get="/tab/ledger"
+        hx-target="#tab-content"
+        hx-push-url="/tab/ledger"
+        role="tab"
+        aria-selected="{{ 'true' if active_tab == 'ledger' else 'false' }}"
+        class="chrome-tab{% if active_tab == 'ledger' %} is-active{% endif %}">
+        Ledger
+    </a>
+    <a
+        href="/tab/config"
+        hx-get="/tab/config"
+        hx-target="#tab-content"
+        hx-push-url="/tab/config"
+        role="tab"
+        aria-selected="{{ 'true' if active_tab == 'config' else 'false' }}"
+        class="chrome-tab{% if active_tab == 'config' %} is-active{% endif %}">
+        Config
+    </a>
+</div>

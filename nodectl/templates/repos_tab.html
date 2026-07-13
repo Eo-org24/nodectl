@@ -1,0 +1,142 @@
+<!-- Repos Tab Content -->
+<div class="terminal-card p-6 relative">
+    <div class="flex justify-between items-center mb-6 border-b border-[#9d00ff] pb-3">
+        <h2 class="text-lg font-bold tracking-wider text-glow uppercase">Repos</h2>
+        {% if read_only %}
+            <span class="text-xs text-[#9d00ff] font-mono uppercase tracking-wide">Read-only phase</span>
+        {% else %}
+            <button onclick="document.getElementById('strap-modal').classList.remove('hidden')" class="btn-terminal text-xs px-3 py-1.5 uppercase font-bold tracking-wide text-[#ff00ff] border-[#ff00ff]">
+                + Strap auth
+            </button>
+        {% endif %}
+    </div>
+    
+    <!-- Credentials Inventory -->
+    <div class="mb-8">
+        <h3 class="text-xs text-[#ff2a9d] uppercase tracking-wider font-bold mb-3 font-mono">Credentials</h3>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse font-mono text-xs">
+                <thead>
+                    <tr class="border-b border-[#4a0072] text-gray-500 uppercase">
+                        <th class="py-2 px-3">Repo</th>
+                        <th class="py-2 px-3">Node</th>
+                        <th class="py-2 px-3">Token</th>
+                        <th class="py-2 px-3">Expires</th>
+                        <th class="py-2 px-3 text-right">State</th>
+                    </tr>
+                </thead>
+                <tbody id="creds-list">
+                    {% if creds %}
+                        {% for c in creds %}
+                        <tr class="border-b border-[#4a0072]/30 hover:bg-[#1a002a]/50 {% if c.status == 'expired' %}bg-red-950/10{% endif %}">
+                            <td class="py-3 px-3 font-bold text-[#ff00ff]">{{ c.repo_name }}</td>
+                            <td class="py-3 px-3 text-[#ff2a9d]">{{ c.node }}</td>
+                            <td class="py-3 px-3 text-gray-400">{{ c.permissions }}</td>
+                            <td class="py-3 px-3 {% if c.status == 'expired' %}text-red-500 font-bold{% else %}text-yellow-500{% endif %}">
+                                {% if c.status == 'expired' %}
+                                    EXPIRED ✕ 🔴
+                                {% else %}
+                                    {{ c.expires_at[:10] }} 🟢
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-3 text-right">
+                                {% if not read_only and c.status != 'scrubbed' %}
+                                <button hx-post="/api/repos/scrub" hx-vals='{"cred_id": "{{ c.cred_id }}"}' hx-target="#tab-content" hx-swap="innerHTML" hx-prompt="Type 'delete' to confirm scrub of credential on {{ c.node }}:" class="btn-terminal-action text-[10px] px-2 py-1 font-bold uppercase tracking-wide {% if c.status == 'expired' %}!border-red-900 !text-red-400 hover:!bg-red-900/20{% endif %}">
+                                    Scrub{% if c.status == 'expired' %}!{% endif %}
+                                </button>
+                                {% elif c.status != 'scrubbed' %}
+                                <span class="text-gray-600">READ ONLY</span>
+                                {% else %}
+                                <span class="text-gray-600">SCRUBBED ⚪</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="py-6 text-center text-gray-500 italic">No credentials strapped. Use Strap auth to give a node scoped access to one repo.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Worktrees -->
+    <div>
+        <h3 class="text-xs text-[#ff2a9d] uppercase tracking-wider font-bold mb-3 font-mono">Worktrees</h3>
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            {% if creds %}
+                {% for c in creds %}
+                {% if c.status != 'scrubbed' %}
+                <div class="border border-[#9d00ff] bg-[#1a002a] p-4 flex flex-col gap-2">
+                    <div class="flex justify-between items-center border-b border-[#4a0072] pb-2">
+                        <div class="font-mono font-bold text-[#ff00ff] text-sm">{{ c.repo_name }} @ {{ c.node }}</div>
+                        <div class="text-[10px] text-green-400 uppercase tracking-wide">🟢 live</div>
+                    </div>
+                    <div class="font-mono text-xs text-gray-400 my-2">
+                        Path: {{ c.dest_path }}
+                    </div>
+                    <div class="flex justify-end gap-2 mt-auto pt-2">
+                        {% if not read_only %}
+                        <button hx-post="/api/repos/nuke" hx-vals='{"cred_id": "{{ c.cred_id }}"}' hx-target="#tab-content" hx-swap="innerHTML" hx-prompt="Type 'delete' to confirm NUKE of {{ c.dest_path }} and its credential:" class="btn-terminal-action text-[10px] px-2 py-1 font-bold uppercase tracking-wide !border-red-900 !text-red-400 hover:!bg-red-900/20">Nuke</button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if not read_only %}
+<!-- Strap Auth Modal -->
+<div id="strap-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-8">
+    <div class="terminal-card w-full max-w-lg bg-[#0a001a] shadow-[0_0_20px_rgba(255,0,255,0.15)] border border-[#ff00ff]">
+        <div class="border-b border-[#9d00ff] px-4 py-3 flex justify-between items-center bg-[#1a002a]">
+            <span class="text-xs text-[#ff00ff] uppercase tracking-wider font-bold text-glow">Strap Auth</span>
+            <button onclick="document.getElementById('strap-modal').classList.add('hidden')" class="text-[#ff2a9d] hover:text-[#ff00ff] focus:outline-none">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="square" stroke-linejoin="miter" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <form hx-post="/api/repos/strap" hx-target="#tab-content" hx-swap="innerHTML" hx-disabled-elt="find button[type='submit']" class="p-6 flex flex-col gap-4 font-mono">
+            <div>
+                <label class="block text-xs text-[#ff2a9d] uppercase tracking-wider mb-2 font-bold">Repo URL (HTTPS)</label>
+                <input type="url" name="repo_url" required placeholder="https://github.com/org/repo.git" class="w-full bg-[#1a002a] border border-[#9d00ff] text-[#ff00ff] px-3 py-2 text-sm focus:outline-none focus:border-[#ff00ff]">
+            </div>
+            <div>
+                <label class="block text-xs text-[#ff2a9d] uppercase tracking-wider mb-2 font-bold">Node</label>
+                <select name="node" required class="w-full bg-[#1a002a] border border-[#9d00ff] text-[#ff00ff] px-3 py-2 text-sm focus:outline-none focus:border-[#ff00ff]">
+                    {% for node in nodes %}
+                    <option value="{{ node.name }}">{{ node.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs text-[#ff2a9d] uppercase tracking-wider mb-2 font-bold">Dest Path</label>
+                <input type="text" name="dest_path" required placeholder="~/work/repo-name" class="w-full bg-[#1a002a] border border-[#9d00ff] text-[#ff00ff] px-3 py-2 text-sm focus:outline-none focus:border-[#ff00ff]">
+            </div>
+            <div>
+                <label class="block text-xs text-[#ff2a9d] uppercase tracking-wider mb-2 font-bold">Token</label>
+                <input type="password" name="token" required autocomplete="off" placeholder="ghp_..." class="w-full bg-[#1a002a] border border-[#9d00ff] text-[#ff00ff] px-3 py-2 text-sm focus:outline-none focus:border-[#ff00ff]">
+            </div>
+            <div class="flex gap-4">
+                <div class="flex-1">
+                    <label class="block text-xs text-[#ff2a9d] uppercase tracking-wider mb-2 font-bold">Expiry Date</label>
+                    <input type="date" name="expires_at" required class="w-full bg-[#1a002a] border border-[#9d00ff] text-[#ff00ff] px-3 py-2 text-sm focus:outline-none focus:border-[#ff00ff]">
+                </div>
+                <div class="flex-1">
+                    <label class="block text-xs text-[#ff2a9d] uppercase tracking-wider mb-2 font-bold">Scopes Note</label>
+                    <input type="text" name="scopes_note" placeholder="Contents:rw" class="w-full bg-[#1a002a] border border-[#9d00ff] text-[#ff00ff] px-3 py-2 text-sm focus:outline-none focus:border-[#ff00ff]">
+                </div>
+            </div>
+            <div class="mt-4 flex justify-end">
+                <button type="submit" class="btn-terminal text-sm px-6 py-2 uppercase font-bold tracking-wide text-[#ff00ff] border-[#ff00ff]">
+                    Inject Credential
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}

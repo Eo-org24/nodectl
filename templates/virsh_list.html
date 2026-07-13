@@ -1,0 +1,56 @@
+<div class="table-shell overflow-x-auto">
+    {% if error_msg %}
+    <div class="mb-4 border border-red-900 bg-[#1a002a] p-3 text-xs font-mono text-red-400">
+        {{ error_msg }}
+    </div>
+    {% endif %}
+
+    <table class="w-full text-left border-collapse font-mono text-xs vm-table">
+        <thead>
+            <tr class="text-[#ff2a9d] uppercase">
+                <th class="py-2 px-3">ID</th>
+                <th class="py-2 px-3">VM Name</th>
+                <th class="py-2 px-3">State</th>
+                <th class="py-2 px-3 text-right">Terminal</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="vm-row">
+                <td class="py-3 px-3 text-[#9d00ff]">-</td>
+                <td class="py-3 px-3 font-bold text-[#ff00ff] text-glow">Watcher (Host)</td>
+                <td class="py-3 px-3 text-green-400 uppercase">online</td>
+                <td class="py-3 px-3 text-right">
+                    {% if current_target_type == 'host' %}
+                    <span class="target-pill">Targeted</span>
+                    {% else %}
+                    <span class="muted-pill">Read only</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% if vms %}
+                {% for vm in vms %}
+                <tr class="vm-row">
+                    <td class="py-3 px-3 text-[#ff2a9d]">{{ vm.id }}</td>
+                    <td class="py-3 px-3 font-bold text-[#ff00ff]">{{ vm.name }}</td>
+                    <td class="py-3 px-3">
+                        <span class="{% if vm.state == 'running' %}text-green-400{% else %}text-[#9d00ff]{% endif %} uppercase">
+                            {{ vm.state }}
+                        </span>
+                    </td>
+                    <td class="py-3 px-3 text-right">
+                        {% if current_target_type == 'vm' and current_target_name == vm.name %}
+                        <span class="target-pill">Targeted</span>
+                        {% else %}
+                        <span class="muted-pill">Read only</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="4" class="py-6 px-3 text-center text-[#9d00ff]">No VMs returned by <code>virsh list --all</code>.</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>

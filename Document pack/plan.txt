@@ -1,0 +1,433 @@
+NodePanel Vue Frontend Redesign
+1. Design direction
+NodePanel should remain a compact homelab control plane with a terminal-inspired identity, but it should stop behaving like a collection of independent forms.
+The redesigned frontend should answer four questions immediately:
+What does the factory believe exists?
+What actually exists on the hypervisor?
+Which machine am I currently targeting?
+What operation is running, completed, blocked, or failed?
+That directly reflects NodePanel’s two-source architecture: declared factory state from node manifests and actual state from libvirt.
+The current frontend exposes both sources, but separates them into an Active Nodes card and a Hypervisor State table. This forces the operator to compare them manually.
+The Vue version should reconcile them into one operational view.
+2. Proposed application shell
+┌─────────────────────────────────────────────────────────────────────────────┐│ NODEPANEL   API ●   HYPERVISOR ●   TARGET: worker-02   JOBS: 1   TERMINAL ▣ │├──────────────┬───────────────────────────────────────────────┬──────────────┤│              │                                               │              ││ Overview     │ Main workspace                                │ Terminal     ││ Nodes        │                                               │ drawer       ││ Workflows    │ Overview / Node / Workflow / Repo / Audit     │              ││ Repositories │                                               │ worker-02    ││ Audit        │                                               │ CONNECTED    ││ Settings     │                                               │              ││              │                                               │              │├──────────────┴───────────────────────────────────────────────┴──────────────┤│ Activity: deploy worker-03 · provisioning · step 4/8                  01:42 │└─────────────────────────────────────────────────────────────────────────────┘
+Persistent regions
+System bar
+Always display:
+FastAPI connection status
+hypervisor connection status
+current terminal target
+active job count
+warning count
+terminal toggle
+current time
+The existing header communicates online status, version, and time, but the large ASCII artwork consumes substantial vertical space before any operational information appears.
+Replace it with a compact NodePanel wordmark. Keep the ASCII treatment for:
+the login or boot screen
+an About page
+an optional idle terminal screen
+a collapsible “retro mode”
+The more elaborate GPT ASCII page is useful as visual inspiration, but not as the permanent application shell.
+Navigation rail
+Use real routes rather than HTML fragments:
+/overview/nodes/nodes/:nodeName/workflows/repositories/audit/settings
+Terminal dock
+The terminal should be persistent across route changes.
+Desktop:
+docked on the right
+resizable
+collapsible
+optionally full-screen
+Tablet:
+bottom drawer
+Mobile:
+separate full-screen terminal view
+The current implementation destroys the xterm instance, closes its WebSocket, and creates a new one whenever targetChanged fires. It also relies on a timeout before fitting the terminal.
+In Vue, place the terminal outside <RouterView> so page navigation never destroys it.
+3. Overview page
+Summary strip
+The first row should show a small number of actionable metrics:
+MANIFESTS       HYPERVISOR VMS       RUNNING       DRIFT       ACTIVE JOBS4               5                    3             2           1
+Avoid decorative metrics. Every summary card should filter or navigate to the relevant records.
+Unified node reconciliation table
+This becomes the central NodePanel screen.
+Node
+Manifest
+Hypervisor
+Connection
+Drift
+Target
+Actions
+worker-01
+Ready
+Running
+Reachable
+Aligned
+—
+Open
+worker-02
+Ready
+Shut off
+Offline
+State mismatch
+Selected
+Open
+worker-03
+Exists
+Missing
+—
+Manifest only
+—
+Repair
+test-vm
+Missing
+Running
+Reachable
+Unmanaged VM
+—
+Inspect
+Each row represents a reconciled object rather than either a manifest or VM record.
+export interface ReconciledNode {  name: string  manifest: {    exists: boolean    type?: string    state?: string  }  hypervisor: {    exists: boolean    id?: string    state?: 'running' | 'shut-off' | 'paused' | 'unknown'  }  connection: {    status: 'reachable' | 'unreachable' | 'unchecked'    lastCheckedAt?: string  }  drift:    | 'aligned'    | 'manifest-only'    | 'hypervisor-only'    | 'state-mismatch'  terminalTarget: boolean  availableActions: string[]  warnings: string[]}
+This replaces both:
+nodes_list.html
+virsh_list.html
+The current node list provides manifest actions such as Assign, Snapshot, Destroy, and Collect, while the virsh table separately handles terminal targeting and known-host refreshes.
+Those controls belong together.
+Node inspector drawer
+Selecting a row opens a drawer without navigating away.
+worker-02Factory worker · manifest presentFACTORY STATE       HYPERVISOR STATEReady               Runningworker              ID 7CONNECTIONSSH reachableLast checked 18 seconds agoCURRENT ASSIGNMENTcliplibACTIONS[Target terminal] [Collect] [Snapshot][Refresh host key] [More actions ▾]
+Warnings appear above actions:
+⚠ Manifest reports “ready,” but the VM is currently shut off.
+Do not bury drift inside a status chip.
+4. Nodes page
+The Nodes page is the complete inventory and management view.
+It should provide:
+text search
+state filters
+drift filters
+type filters
+sort by name, state, or last activity
+compact and expanded row modes
+refresh state
+automatic refresh interval selector
+last successful refresh timestamp
+Action grouping
+Do not present all node actions as equivalent buttons.
+Primary actions
+Open
+Target terminal
+Collect
+Lifecycle actions
+Start
+Stop
+Restart
+Snapshot
+Factory actions
+Assign
+Reconcile
+Redeploy
+Destructive actions
+Destroy VM
+Delete manifest
+Destroy VM and manifest
+The current node cards place Assign, Snapshot, Destroy, and Collect side by side with nearly identical presentation.
+That makes the destructive action too visually similar to routine operations.
+5. Workflows page
+The current Toolbox contains five nested tabs:
+Deploy
+Fire
+Transfer
+Paste
+Payload
+These operations are important enough to become a dedicated Workflows page rather than a card above the node inventory.
+Workflow launcher
+What do you want to do?[ Deploy Node ]  Create a new factory worker[ Fire Payload ] Run an approved payload[ Transfer ]     Copy a directory to a target[ Execute ]      Run pasted commands or configuration[ Add Payload ]  Import a payload into the library
+Selecting one opens a focused form.
+Deploy workflow
+Use a short staged flow:
+1. Identity   Project: cliplib   Suggested node: worker-032. Configuration   Template: worker   Network: default   Storage: default3. Review   Manifest path   VM name   Target hypervisor   Planned command4. Deploy
+Even if the backend initially supports only project name and optional node number, the review stage is still valuable.
+Fire Payload workflow
+Show payload state clearly:
+APPROVED✓ bootstrap-agent.sh  SHA256 verified  Last reviewed: 2026-07-08DRAFT⚠ install-tools.sh  Not approved for executionUNAVAILABLE✕ old-worker-init.sh  Manifest mismatch
+The README describes a three-tier picker and SHA-256 manifest gating. That security model should be visible in the UI instead of represented only by a select list.
+Before firing, show:
+selected target
+payload name
+checksum state
+arguments
+expected execution user
+approval state
+Disable execution when the backend reports that the gate is not satisfied.
+Paste and execute
+This is one of the highest-risk interfaces.
+The current form allows pasted script, YAML, or commands to be submitted directly to the selected target.
+The redesigned flow should require:
+target selection
+execution user confirmation
+content preview
+displayed command count or content size
+explicit Run confirmation
+For destructive-looking content, the frontend can show a warning, but the backend must remain the authority.
+Do not pretend the browser can securely determine whether arbitrary shell content is safe.
+Transfer
+Show:
+source folder name
+file count
+total size
+target node
+destination path
+overwrite policy
+transfer progress
+The current directory input provides no visible transfer summary before submission.
+6. Operation and job model
+The current forms insert returned HTML into small output boxes such as #job-output, #fire-output, and #transfer-output.
+Vue should replace this with structured jobs.
+export interface OperationJob {  id: string  type: 'deploy' | 'fire' | 'transfer' | 'collect' | 'snapshot' | 'destroy'  target?: string  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled'  progress?: number  currentStep?: string  createdAt: string  finishedAt?: string  summary?: string  output: JobOutputLine[]}
+A mutation should return:
+{  "job_id": "job_01J...",  "status": "queued"}
+The frontend then tracks it through:
+polling initially
+Server-Sent Events later
+or a dedicated operation WebSocket
+Activity center
+A persistent bottom bar should surface operations:
+● DEPLOY worker-03       Running      Creating disk...✓ COLLECT worker-01      Completed    12 files collected✕ FIRE worker-02         Failed       SSH connection refused
+Clicking an operation opens its complete output and ledger reference.
+Do not mix structured operation logs with the interactive terminal. They serve different purposes.
+7. Terminal redesign
+Terminal header
+SYSTEM TERMINALTARGET: worker-02SSH: sarge@192.168.122.42CONNECTED · 00:18:42[Reconnect] [Clear] [Pop out] [Full screen] [Change target]
+The current terminal header only shows tty1 or connection status, while target selection is located in the hypervisor table.
+Target identity must always be visible above the terminal.
+Vue implementation
+Use:
+TerminalDock.vue└── useTerminalSession.ts
+The composable owns:
+xterm initialization
+FitAddon
+WebSocket
+connection state
+reconnect behavior
+terminal resize
+target changes
+cleanup
+Use ResizeObserver on the terminal container instead of relying only on window.resize and an arbitrary timeout.
+Do not store the xterm instance or WebSocket inside Pinia. They are non-serializable runtime resources.
+Pinia can store:
+{  selectedTarget,  terminalOpen,  terminalWidth,  connectionStatus}
+Existing target mismatch
+The supplied node fragment posts several node actions into #terminal-output, but the main template defines #xterm-container and no #terminal-output element.
+The Vue rewrite should eliminate DOM-target coupling entirely. Actions should update the operation store, not inject HTML into a named element.
+8. Repositories page
+Separate the current page into three sections:
+Credential summary
+ACTIVE     EXPIRING SOON     EXPIRED     SCRUBBED3          1                 1           7
+Credential table
+Columns:
+repository
+node
+scope note
+expiry
+status
+worktree
+actions
+Do not emphasize token suffixes as a major column. They are occasionally useful for identification, but repository, scope, target, and expiry matter more.
+Worktrees
+Show each active worktree with:
+repository
+node
+destination
+credential status
+last verified
+Git remote state
+actions
+The existing page already separates credential inventory and worktrees, which is a good domain division worth preserving.
+Strap credential dialog
+Use a proper Vue dialog with:
+repository validation
+node selector
+suggested destination path
+expiry validation
+scope note
+explicit “token is transmitted once” explanation
+disabled submit while processing
+The token must:
+exist only inside local form state
+never enter Pinia
+be cleared immediately after submission
+never be included in logs
+never be refetched by the frontend
+Scrub versus nuke
+These must have visibly different confirmation flows.
+Scrub
+Remove repository credential from worker-02?The worktree will remain, but authenticated Git operations will stop.
+Nuke
+Delete this worktree and remove its credential?Repository: nodepanelNode: worker-02Path: ~/work/nodepanelType worker-02/nodepanel to continue.
+The current interface uses HTMX prompt confirmations containing the word delete, but Vue should display the exact impact and target before accepting confirmation.
+9. Audit page
+The current ledger is a static table of the most recent 100 records.
+Retain the table but add:
+action filter
+target filter
+status filter
+date range
+free-text search
+newest/oldest ordering
+live refresh toggle
+expandable structured parameters
+operation correlation ID
+copy JSON
+export filtered records
+Row detail drawer
+ACTIONpayload.fireTARGETworker-02STATUSerrorACTORnodepanel-uiTIMESTAMP2026-07-10T17:31:22ZPARAMETERS{  "payload": "bootstrap-agent.sh",  "sha256": "...",  "approval": "approved"}RELATED JOBjob_01J...
+Avoid rendering Python dictionary strings directly in the table. Return structured JSON and render it deliberately.
+10. Settings page
+Organize settings into sections:
+Hypervisor connectionVM SSH defaultsTerminal behaviorRefresh intervalsInterface preferences
+SSH credentials
+The current configuration template renders the stored VM password back into the password field:
+value="{{ vm_ssh_password }}"
+That should be removed.
+Instead show:
+SSH passwordConfigured ●[Replace password] [Clear password]
+The frontend should never receive the stored password.
+For key paths, add:
+current path
+backend validation status
+“test connection” action
+useful validation error
+Save settings through JSON and show field-level errors rather than replacing a generic status element.
+11. Visual system
+Keep
+dark control-plane appearance
+cyan as the identity color
+monospace styling for machine identifiers, logs, commands, and terminal output
+sharp geometry
+subtle glow for selected or active state
+Change
+The current interface applies cyan, uppercase text, borders, glow, and monospace typography almost everywhere.
+That weakens hierarchy because nearly every element demands equal attention.
+Use:
+a readable sans-serif for navigation, labels, explanations, and forms
+monospace for technical values
+cyan for selection and interaction
+green for healthy
+amber for drift and warnings
+red only for failure and destructive actions
+neutral gray for inactive information
+Effects
+Reduce or disable:
+permanent scanline animation
+heavy vignette
+frequent pulsing
+glowing all primary text
+flickering content
+Support:
+@media (prefers-reduced-motion: reduce) {  *,  *::before,  *::after {    animation-duration: 0.01ms !important;    animation-iteration-count: 1 !important;  }}
+Add a UI preference:
+Visual effects○ Off● Subtle○ Full retro
+Typography
+Avoid operational text at 10px. Several current labels and statuses use text-[10px].
+Recommended minimums:
+body: 14–16px
+labels: 12–13px
+table content: 13–14px
+minor metadata: 12px
+terminal: configurable 13–16px
+12. Vue architecture
+Recommended stack
+Vue 3TypeScriptViteVue RouterPiniaxterm.jsTailwind CSS
+Do not add Nuxt.
+Do not add a large global component framework initially. NodePanel has a distinct visual system and only needs a modest reusable component layer.
+Do not add Vue Query at the beginning. A typed API client plus feature stores is sufficient. Introduce a query library only when caching and invalidation become genuinely difficult.
+Suggested source layout
+frontend/├── index.html├── package.json├── vite.config.ts└── src/    ├── main.ts    ├── App.vue    ├── router/    │   └── index.ts    ├── api/    │   ├── client.ts    │   ├── nodes.ts    │   ├── workflows.ts    │   ├── repositories.ts    │   ├── ledger.ts    │   └── settings.ts    ├── layouts/    │   └── AppShell.vue    ├── components/    │   ├── AppButton.vue    │   ├── AppDialog.vue    │   ├── StatusBadge.vue    │   ├── EmptyState.vue    │   ├── ConfirmActionDialog.vue    │   └── JsonViewer.vue    ├── features/    │   ├── nodes/    │   │   ├── NodeInventoryTable.vue    │   │   ├── NodeInspector.vue    │   │   ├── NodeStateBadge.vue    │   │   ├── NodeActions.vue    │   │   └── nodeStore.ts    │   ├── workflows/    │   │   ├── WorkflowLauncher.vue    │   │   ├── DeployWorkflow.vue    │   │   ├── FireWorkflow.vue    │   │   ├── TransferWorkflow.vue    │   │   ├── PasteWorkflow.vue    │   │   └── jobsStore.ts    │   ├── terminal/    │   │   ├── TerminalDock.vue    │   │   └── useTerminalSession.ts    │   ├── repositories/    │   │   ├── CredentialTable.vue    │   │   ├── WorktreeGrid.vue    │   │   └── StrapCredentialDialog.vue    │   ├── ledger/    │   │   ├── LedgerTable.vue    │   │   └── LedgerDetail.vue    │   └── settings/    │       └── SshSettingsForm.vue    ├── views/    │   ├── OverviewView.vue    │   ├── NodesView.vue    │   ├── WorkflowsView.vue    │   ├── RepositoriesView.vue    │   ├── AuditView.vue    │   └── SettingsView.vue    └── styles/        ├── tokens.css        ├── base.css        └── utilities.css
+Avoid turning every label, table cell, and small wrapper into a Vue component.
+13. Backend API changes
+The current FastAPI routes return HTML fragments for HTMX. The migration should introduce JSON endpoints alongside them.
+Suggested endpoints
+GET    /api/v1/system/statusGET    /api/v1/nodesGET    /api/v1/nodes/:namePOST   /api/v1/nodesPOST   /api/v1/nodes/:name/actions/:actionGET    /api/v1/hypervisor/vmsPOST   /api/v1/terminal/targetGET    /api/v1/payloadsPOST   /api/v1/payloadsPOST   /api/v1/executionsPOST   /api/v1/transfersGET    /api/v1/jobsGET    /api/v1/jobs/:idGET    /api/v1/repositories/credentialsPOST   /api/v1/repositories/credentialsPOST   /api/v1/repositories/credentials/:id/scrubPOST   /api/v1/repositories/credentials/:id/nukeGET    /api/v1/ledgerGET    /api/v1/settingsPATCH  /api/v1/settingsPOST   /api/v1/settings/test-ssh
+Action responses
+Do not return presentation HTML.
+Return structured results:
+{  "ok": true,  "job": {    "id": "job_01J...",    "type": "collect",    "target": "worker-02",    "status": "queued"  }}
+Errors should use a consistent format:
+{  "ok": false,  "error": {    "code": "SSH_UNREACHABLE",    "message": "Could not connect to worker-02.",    "details": {      "host": "192.168.122.42"    }  }}
+The frontend should not parse command output to determine success.
+14. Migration strategy
+Stage 1: foundation
+Create frontend/ with Vue 3, TypeScript, and Vite.
+Keep the existing HTMX interface available at /legacy.
+Serve Vue at /app.
+Add a Vite development proxy to FastAPI.
+Introduce /api/v1/system/status.
+Recreate the compact shell and persistent terminal.
+No current feature is removed.
+Stage 2: overview and reconciliation
+Add JSON endpoints for manifests and virsh state.
+Build the unified node inventory.
+Add target selection.
+Add the node inspector.
+Keep actions linked to the existing backend functions.
+This stage delivers the greatest usability improvement.
+Stage 3: structured jobs
+Wrap deploy, collect, snapshot, fire, and transfer operations in job records.
+Add the activity center.
+Replace injected HTML output.
+Preserve raw output as structured job lines.
+Stage 4: workflows
+Migrate Deploy.
+Migrate Fire Payload.
+Migrate Transfer.
+Migrate Paste and Execute.
+Migrate Payload Upload.
+Stage 5: repositories
+Add JSON credential and worktree APIs.
+Add safe scrub and nuke dialogs.
+Ensure tokens never return to the browser.
+Stage 6: ledger and settings
+Add ledger filters and details.
+Remove password retrieval.
+Add SSH connection testing.
+Add UI preferences and reduced-motion support.
+Stage 7: cutover
+Make Vue the default /.
+Retain /legacy for one release.
+Compare ledger records and action results between both interfaces.
+Remove HTMX templates only after feature parity is verified.
+15. Recommended first implementation slice
+Do not start by converting all existing templates.
+Build this vertical slice first:
+Vue app shell
+compact status bar
+persistent xterm terminal
+JSON manifest endpoint
+JSON virsh endpoint
+reconciled node table
+target terminal action
+collect action as a structured job
+activity center
+node inspector drawer
+That slice proves:
+Vue/FastAPI integration
+the new state model
+terminal persistence
+operation handling
+the new visual hierarchy
+compatibility with the existing backend
+Only after that should Repositories, Ledger, Config, and all five Toolbox workflows be migrated.
+Final recommendation
+NodePanel should not become a generic rounded-card SaaS dashboard.
+Its strongest visual identity is the operator-console aesthetic, and that should remain. The redesign should make it feel like a serious control surface rather than a terminal-themed webpage:
+compact system status
+unified factory/hypervisor state
+persistent selected target
+persistent terminal
+structured background operations
+explicit drift
+clear destructive-action boundaries
+technical detail available on demand
+The largest architectural improvement is not Vue itself. It is replacing fragment-driven DOM updates with an explicit frontend model for:
+nodestargetsjobscredentialsaudit recordssystem status
+Vue then gives that model a stable, maintainable interface.

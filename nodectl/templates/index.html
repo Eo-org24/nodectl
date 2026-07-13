@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block body %}
+<main class="dashboard-shell space-y-8">
+    <header class="hero-panel">
+        <div>
+            <p class="eyebrow">NodePanel // factory control plane</p>
+            <h1 class="hero-title">{{ title }}</h1>
+            <p class="hero-copy">
+                Manifest state comes from remote `node.yaml` files. Hypervisor state comes from `virsh list --all`.
+            </p>
+        </div>
+        <div class="hero-actions">
+            <div class="status-chip">
+                <span class="status-dot"></span>
+                Signed in as {{ user.username }} / {{ user.role }}
+            </div>
+            <form method="post" action="/logout">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="chrome-button" type="submit">Log out</button>
+            </form>
+        </div>
+    </header>
+
+    <section class="cockpit-grid">
+        <article class="chrome-panel">
+            <p class="panel-kicker">Factory target</p>
+            <h2 class="panel-title">Remote control host</h2>
+            <dl class="data-stack">
+                <div class="data-row"><dt>Host</dt><dd>{{ factory_host }}</dd></div>
+                <div class="data-row"><dt>Port</dt><dd>{{ factory_port }}</dd></div>
+                <div class="data-row"><dt>User</dt><dd>{{ factory_user }}</dd></div>
+                <div class="data-row"><dt>Factory dir</dt><dd>~/nodefactory</dd></div>
+            </dl>
+        </article>
+
+        <article class="chrome-panel">
+            <p class="panel-kicker">State model</p>
+            <h2 class="panel-title">Drift visibility</h2>
+            <ul class="bullet-matrix">
+                <li>Factory state is parsed from manifests on the remote host.</li>
+                <li>Hypervisor state is queried live from libvirt.</li>
+                <li>The browser only renders HTML snippets returned by FastAPI.</li>
+                <li>Node actions stream stdout and stderr directly into the terminal panel.</li>
+            </ul>
+        </article>
+    </section>
+
+    <section class="dashboard-shell mt-8">
+        {% include "components/primary_tabs.html" %}
+        <div id="tab-content" class="mt-6">
+            {% include "dashboard_tab.html" %}
+        </div>
+    </section>
+</main>
+{% endblock %}

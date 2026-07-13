@@ -1,0 +1,38 @@
+{% if nodes %}
+{% for node in nodes %}
+<div class="node-card panel-lift">
+    <div class="space-y-2">
+        <div class="flex flex-wrap items-center gap-3">
+            <h3 class="node-title">{{ node.name }}</h3>
+            <span class="node-badge">TYPE: {{ node.type }}</span>
+            <span class="node-badge">STATE: {{ node.state }}</span>
+        </div>
+        <p class="node-meta">MANIFEST: {{ node.path }}</p>
+    </div>
+    {% if not read_only and session_user and session_user.role == "admin" %}
+    <div class="flex gap-2 items-center flex-wrap">
+        <button hx-post="/api/nodes/{{ node.name }}/action/assign" hx-target="#terminal-output" class="btn-terminal-action text-xs px-3 py-1.5 font-bold uppercase tracking-wider">Assign</button>
+        <button hx-post="/api/nodes/{{ node.name }}/action/snapshot" hx-target="#terminal-output" class="btn-terminal-action text-xs px-3 py-1.5 font-bold uppercase tracking-wider">Snapshot</button>
+        <button
+            type="button"
+            hx-post="/api/nodes/{{ node.name }}/action/destroy"
+            hx-target="#terminal-output"
+            hx-confirm="Destroy node {{ node.name }}? This cannot be undone."
+            hx-disabled-elt="this"
+            hx-indicator="#node-action-spinner-{{ node.name }}"
+            class="btn-terminal-action text-xs px-3 py-1.5 font-bold uppercase tracking-wider !border-red-900 !text-red-400 hover:!bg-red-900/20">
+            Destroy
+        </button>
+        <span id="node-action-spinner-{{ node.name }}" class="htmx-indicator text-[10px] text-red-400 font-mono animate-pulse" aria-live="polite">Processing…</span>
+    </div>
+    {% else %}
+    <p class="node-meta">Viewer mode: actions disabled</p>
+    {% endif %}
+</div>
+{% endfor %}
+{% else %}
+<div class="empty-state">
+    <p class="text-sm font-mono tracking-wide">NO ACTIVE NODE MANIFESTS DETECTED</p>
+    <p class="text-xs mt-1 text-[#9d00ff]/70 font-mono">PATH: ~/nodefactory/nodes/</p>
+</div>
+{% endif %}

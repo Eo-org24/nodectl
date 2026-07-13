@@ -1,0 +1,7 @@
+.git
+.venv
+__pycache__
+*.pyc
+nodepanel.db
+frontend/node_modules
+uploads
