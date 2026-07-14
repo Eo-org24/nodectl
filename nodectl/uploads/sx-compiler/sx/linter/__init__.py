@@ -1,2 +1,0 @@
-"""Linter package scaffold."""
-
