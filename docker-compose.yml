@@ -11,6 +11,7 @@ services:
       STAGING_ROOT: /app/staging
       INBOX_ROOT: /app/inbox
       LEDGER_ROOT: /app/ledger
+      UCC_EVENTS_ROOT: /app/events
       DATABASE_PATH: /app/data/nodepanel.db
       SSH_KNOWN_HOSTS_PATH: /app/data/known_hosts
       FACTORY_SSH_KEY_PATH: /run/secrets/factory_ssh_key
@@ -31,6 +32,7 @@ services:
       - ./staging:/app/staging
       - ./inbox:/app/inbox
       - ./ledger:/app/ledger
+      - ./events:/app/events
     secrets:
       - factory_ssh_key
       - vm_ssh_key

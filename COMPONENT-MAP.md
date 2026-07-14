@@ -1,0 +1,96 @@
+# nodectl — Component Map
+
+M-c deliverable (roadmap §4A "Classify every component"). Every component is
+tagged with exactly one of the nine categories the roadmap defines:
+
+`ucc-app` (cross-cutting app composition/infra) · `presentation` (renders UI)
+· `materials-exchange` (moves files/credentials to or from a remote node) ·
+`command-catalog` (the API surface of controllable actions) ·
+`artifact-adapter` (Stage-2 seam toward Artifact-compiler) ·
+`factory-adapter` (Stage-2 seam toward VM-Factory) · `diagnostic-only`
+(read-only, no mutation) · `legacy-standalone` (fenced — must never be
+reachable from a port, per `tests/unit/test_infra_fence.py`) · `remove`
+(dead, flagged not yet deleted).
+
+This is a snapshot as of M-c (2026-07-15). Re-derive from the code before
+trusting it in a later session — do not assume it stays accurate as the
+repo changes.
+
+## `backend/` — core application
+
+| Component | Category | Notes |
+|---|---|---|
+| `app.py` | ucc-app | `create_app()`, lifespan (startup health check), route/mount wiring. |
+| `main.py` | ucc-app | ASGI entrypoint (`uvicorn backend.main:app`). |
+| `config.py` | ucc-app | `Settings` (pydantic-settings). Dev-root isolation (M-c) lives here. |
+| `db.py` | ucc-app | SQLite connection/schema init (`nodepanel.db` — filename unchanged by D5, see AGENTS.md). |
+| `auth.py` | ucc-app | Session issuing/verification (HMAC-signed cookie). |
+| `security.py` | ucc-app | CSRF token check, security headers. |
+| `paths.py` | ucc-app | `safe_join` — path-traversal guard, shared by materials-exchange routes. |
+| `ledger.py` | ucc-app | Append-only audit writer. Not vendored despite the old header comment's claim (corrected in M-c/D5 — see AGENTS.md). `VALID_TOOL` dual-accepts `nodepanel` through the D5 transition window. |
+| `ucc_events.py` | ucc-app | G2 event dual-write (`ucc.event` alongside the legacy ledger entry); `deterministic_id()` (D4 placeholder-ID convention). |
+| `idempotency_store.py`, `idempotent_node_action.py` | ucc-app | M-b: SQLite-backed idempotent-replay wrapper around the one fenced real operation (`node_action`). |
+| `diagnostics.py` | diagnostic-only | M-c: `effective_config()` (secrets always redacted), `module_health()` (`ucc.module-registration`-shaped, computed from the same startup check `lifespan()` runs — never fabricated). |
+| `cli.py` | diagnostic-only | `ssh-diagnose`, `config show`, `module-health` — every subcommand is read-only. |
+| `ssh_client.py`: `run_factory_script`, `get_virsh_list` | legacy-standalone | **Fenced.** Direct SSH execution of allowlisted scripts / `virsh list --all` against the factory host. Never reachable from a port — `FactoryPort` is a separate seam (see below), not a wrapper around these. |
+| `ssh_client.py`: `get_node_manifests`, `normalize_manifest_record` | legacy-standalone | **Fenced.** Reads remote VM node manifest files directly over SFTP. |
+
+## `backend/ports/` — the real Stage-2 seam
+
+| Component | Category | Notes |
+|---|---|---|
+| `artifact_port_stub.py` | artifact-adapter | Every method refuses `DEPENDENCY_UNAVAILABLE` by design (G3). Consumed as `app.state.artifact_port`. Real adapter is Stage 2 — out of narrow-fork scope. |
+| `factory_port_stub.py` | factory-adapter | Same shape, `app.state.factory_port`. **Must never call `ssh_client.py`'s fenced functions or `services/factory.py`'s `hypervisor_snapshot`** — that's the actual fence `test_infra_fence.py` enforces (AST-based, not a naming convention). |
+
+## `backend/routers/`
+
+| Component | Category | Notes |
+|---|---|---|
+| `api.py` | command-catalog | The controllable-action surface as a whole. Mixed internally — see below. |
+| `api.py`: `POST /api/nodes/{node_name}/action/{action}` | legacy-standalone | **Fenced** (allowlisted factory scripts over SSH). Also the one route wrapped in `ucc.request`/`ucc.result` envelopes + M-b idempotency for G2 conformance — envelope conformance and standalone-only execution are independent properties; this route has both. |
+| `api.py`: transfer routes (stage/collect) | materials-exchange | Delegates to `services/transfers.py`. |
+| `api.py`: git-credential routes | materials-exchange | Delegates to `services/git_credentials.py` (D5-renamed remote paths, dual-accept scrub). |
+| `api.py`: host-key probe/approve routes | materials-exchange | Delegates to `services/host_keys.py` — trust establishment before a materials-exchange operation. |
+| `health.py` | diagnostic-only | `/healthz`, driven by `app.state.health_ready`/`health_error` (set in `app.py`'s `lifespan()`). |
+| `terminal.py` | legacy-standalone | **Fenced.** `/api/terminal/ws` — an echo stub, not a real shell. Origin-checked. |
+| `ui.py` | presentation | Jinja/HTMX tab rendering. `tab_context()` calls the fenced `hypervisor_snapshot()` for the standalone dashboard tab — a fenced call site, but the router itself is presentation. |
+
+## `backend/services/`
+
+| Component | Category | Notes |
+|---|---|---|
+| `ssh.py` | ucc-app | Generic SSH/SFTP transport client shared by both fenced (factory) and materials-exchange (git/transfer/host-key) call sites — not itself a materials-mover. |
+| `factory.py`: `hypervisor_snapshot()` | legacy-standalone | **Fenced.** `virsh list --all` against the factory host. |
+| `git_credentials.py` | materials-exchange | Deploy-key provisioning/scrub. D5: writes new keys to `~/.ssh/nodectl/`, `scrub()` dual-removes the legacy `~/.ssh/nodepanel/` path too. |
+| `host_keys.py` | materials-exchange | SSH host-key probe/approve (trust bootstrap before transfers). |
+| `transfers.py` | materials-exchange | Staged file transfer to/from a managed node. |
+
+## Presentation
+
+| Component | Category | Notes |
+|---|---|---|
+| `templates/*.html` | presentation | Server-rendered Jinja + HTMX partials. The default, shipped UI. |
+| `static/` (`input.css`, `output.css`, `vapor.css`, `vendor/htmx.min.js`, `vendor/xterm*`) | presentation | Built/vendored front-end assets for the Jinja UI. |
+| `frontend/src/**` (Vue 3 + TS) | legacy-standalone | **In-progress redesign, not dead.** Conditionally mounted at `/app` only if `frontend/dist/assets` exists (`app.py`); 404s otherwise. Backed by `Document pack/NodePanel Vue Frontend Redesign.docx` + `plan.txt` (still present at repo root). Not yet the default UI — tag may change to `presentation` once it replaces the Jinja UI, or the Jinja UI moves to `legacy-standalone` if the Vue rewrite ships first. |
+
+## Flagged, not yet actioned (`remove` candidates)
+
+Found while building this map — not referenced from any live code (`grep -rn` across
+`backend/` turns up nothing for either), but not deleted here per the "list findings,
+don't blanket-delete" rule (same discipline used for the nested-duplicate removal in
+M-c, which *was* deleted only after confirming via diff it was a dead, superseded copy —
+these two are lower-confidence, so flagged instead):
+
+- `gpt-ascii.html` (repo root) — no route serves it, no template includes it.
+- `library/manifest.json`, `library/scripts/approved/*.sh`, `library/scripts/drafts/*.sh`
+  — `ssh_client.py`'s allowlist for `run_factory_script` is not sourced from this
+  directory (grepped: nothing in `backend/` references `library/`). Possibly the
+  intended home for a future script-allowlist manifest that was never wired up, or a
+  leftover from before the allowlist moved in-code — worth a direct question to the
+  repo owner before deleting, not an assumption either way.
+
+## Not part of the taxonomy (build/ops tooling)
+
+`Dockerfile`, `docker-compose.yml`, `build.sh`, `tailwind.config.js`, `pytest.ini`,
+`requirements.txt`, `.gitignore`/`.dockerignore`, `README.md`, `docs/*.md` — these
+configure or document the app rather than being a component of it.

@@ -12,7 +12,9 @@ data/
 staging/
 inbox/
 ledger/
+events/
 secrets/
 uploads/
+.ucc-dev/
 .env
 tailwindcss-linux-x64
