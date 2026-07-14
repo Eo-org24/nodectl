@@ -7,7 +7,9 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from ..auth import require_admin, require_csrf, require_user
+from ..config import settings
 from ..ssh_client import get_node_manifests, get_virsh_list, run_factory_script
+from ..ucc_events import emit_event
 from .ui import list_staging_files
 
 
@@ -115,6 +117,16 @@ async def node_action(
         exit=result["exit_code"],
         params={"command": result["command"]},
         note=result["stderr"] if result["exit_code"] else "",
+    )
+    # Dual-write (roadmap §4A "Add port + envelope stubs"): the legacy
+    # ledger above stays the primary, unchanged read path; this is additive.
+    emit_event(
+        settings.ucc_events_root / "ucc.jsonl",
+        event_type=f"node.{action}_completed" if result["exit_code"] == 0 else f"node.{action}_failed",
+        subject_kind="node",
+        subject_name=node_name,
+        actor_username=user.username,
+        payload={"action": action, "exit_code": result["exit_code"]},
     )
     return render_command_result(
         request,

@@ -11,6 +11,8 @@ from .auth import issue_session
 from .config import settings
 from .db import init_db
 from .ledger import Ledger
+from .ports.artifact_port_stub import build_artifact_port
+from .ports.factory_port_stub import build_factory_port
 from .routers import api, health, terminal, ui
 from .services.factory import FactoryService
 from .services.git_credentials import GitCredentialService
@@ -46,6 +48,10 @@ def create_app() -> FastAPI:
     app.state.transfer_service = TransferService(app.state.ssh_service, settings)
     app.state.git_credential_service = GitCredentialService(app.state.ssh_service, settings)
     app.state.ledger = Ledger(root=str(settings.ledger_root.parent), tool="nodepanel")
+    # G3 port stubs (roadmap §4A): consumed here so the seam is real; every
+    # method refuses until Stage 2/G5 wires a real in-process adapter.
+    app.state.artifact_port = build_artifact_port()
+    app.state.factory_port = build_factory_port()
 
     def session_response_factory(request: Request, user, target_id: str) -> Response:
         response = JSONResponse({"status": "ok", "target_id": target_id})

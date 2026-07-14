@@ -77,6 +77,14 @@ Set users in `.env`:
 
 The current backend maps those two configured accounts to roles in [`backend/auth.py`](backend/auth.py).
 
+## UCC conformance
+
+Conforms to **ucc-contracts 0.1.0** (2026-07-13 snapshot), vendored at
+`third_party/ucc-contracts/` (schemas, lifecycle transition tables, ID/hash/path
+primitives — no domain code). `tests/contracts/` asserts this repo's own
+(de)serialization and validation matches the pinned contracts exactly;
+bumping the vendored copy is deliberate and version-gated, never silent.
+
 ## Additional Documentation
 
 - [Deployment](docs/DEPLOYMENT.md)

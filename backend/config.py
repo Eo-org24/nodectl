@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     staging_root: Path = Path("staging")
     inbox_root: Path = Path("inbox")
     ledger_root: Path = Path("ledger")
+    ucc_events_root: Path = Path("events")
     database_path: Path = Path("data/nodepanel.db")
 
     factory_host: str = "127.0.0.1"
@@ -62,7 +63,7 @@ class Settings(BaseSettings):
         return value
 
     def ensure_directories(self) -> None:
-        for path in (self.data_root, self.staging_root, self.inbox_root, self.ledger_root):
+        for path in (self.data_root, self.staging_root, self.inbox_root, self.ledger_root, self.ucc_events_root):
             path.mkdir(parents=True, exist_ok=True)
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
         self.ssh_known_hosts_path.parent.mkdir(parents=True, exist_ok=True)

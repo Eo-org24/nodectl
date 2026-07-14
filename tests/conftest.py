@@ -15,6 +15,7 @@ def app_settings(tmp_path, monkeypatch):
     staging_root = tmp_path / "staging"
     inbox_root = tmp_path / "inbox"
     ledger_root = tmp_path / "ledger"
+    ucc_events_root = tmp_path / "events"
     known_hosts = data_root / "known_hosts"
     attrs = {
         "secret_key": "test-secret-key",
@@ -26,6 +27,7 @@ def app_settings(tmp_path, monkeypatch):
         "staging_root": staging_root,
         "inbox_root": inbox_root,
         "ledger_root": ledger_root,
+        "ucc_events_root": ucc_events_root,
         "database_path": data_root / "nodepanel.db",
         "ssh_known_hosts_path": known_hosts,
         "factory_ssh_key_path": tmp_path / "factory_key",
