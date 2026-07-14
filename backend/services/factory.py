@@ -52,6 +52,11 @@ class FactoryService:
         return nodes
 
     def hypervisor_snapshot(self) -> HypervisorSnapshot:
+        """STANDALONE-ONLY / LEGACY (UCC G1 security floor): shells out to
+        `virsh list --all` over SSH. Backs only the standalone `/api/hypervisor/vms`
+        and `/api/v1/system/status` diagnostics; MUST NOT be called from a
+        future FactoryPort adapter — use FactoryPort.get_node_health instead.
+        See tests/unit/test_infra_fence.py."""
         if self.settings.mock_ssh:
             return HypervisorSnapshot(
                 vms=[

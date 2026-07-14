@@ -107,6 +107,18 @@ async def get_node_manifests() -> list[dict[str, Any]]:
     return sorted(manifests, key=lambda item: item["name"])
 
 
+# STANDALONE-ONLY / LEGACY (UCC G1 security floor, UCC-Standards §15):
+# run_factory_script / get_virsh_list / get_node_manifests below reach the
+# VM-Factory host directly over raw SSH (allowlisted factory scripts, virsh
+# CLI output, node.yaml reads) instead of a typed operation. They back only
+# the standalone `/api/nodes/{node_name}/action/{action}`, `/api/hypervisor/vms`,
+# and `/api/nodes` routes and MUST NOT be called from a future FactoryPort
+# adapter (roadmap §4A "Fence infra paths"; §6 fork-gate item 3: no
+# cross-module canonical writes). FactoryPort's list_eligible_nodes /
+# get_node_health / request_execution must be implemented against VM-Factory's
+# own typed FactoryPort, not these. tests/unit/test_infra_fence.py guards this.
+
+
 def _build_factory_action_command(node_name: str, action: str) -> str:
     label = ACTION_LABELS[action]
     safe_name = shlex.quote(node_name)

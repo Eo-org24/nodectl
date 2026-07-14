@@ -89,6 +89,11 @@ async def node_action(
     user=Depends(require_admin),
     _: None = Depends(require_csrf),
 ):
+    """STANDALONE-ONLY / LEGACY (UCC G1 security floor, UCC-Standards §15):
+    drives allowlisted factory-side shell scripts over SSH via
+    run_factory_script. Operator-only, admin+CSRF gated, diagnostic_only —
+    never reachable from a future FactoryPort adapter. See
+    tests/unit/test_infra_fence.py."""
     try:
         result = await run_factory_script(node_name=node_name, action=action)
     except ValueError as exc:

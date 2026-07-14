@@ -13,6 +13,10 @@ router = APIRouter()
 
 @router.websocket("/api/terminal/ws")
 async def terminal_ws(websocket: WebSocket):
+    """STANDALONE-ONLY / LEGACY (UCC G1 security floor, UCC-Standards §15):
+    this is an echo stub, not a real terminal backend, but any future real
+    implementation must stay operator-only, separately audited, and never
+    port-reachable or wired into automation. See tests/unit/test_infra_fence.py."""
     origin = websocket.headers.get("origin")
     if origin not in settings.allowed_origins:
         await websocket.close(code=4403)
