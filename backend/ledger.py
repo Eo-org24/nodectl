@@ -1,6 +1,8 @@
-# VENDORED MODULE — source of truth lives in the soloctl repo.
-# Do NOT edit in place. Change the source, then re-copy into each consumer
-# (nodepanel, soloctl). Schema contract: LEDGER_SCHEMA.md v1.
+# Started as a copy of Artifact-compiler's soloctl/ledger.py; the two have
+# since diverged (soloctl's is now a smaller scrub+event-writer module, this
+# one kept the full ULID/actor/action/target Ledger writer) — see AGENTS.md
+# reconciliation notes (M-c) rather than assuming they're still in sync.
+# Schema contract: LEDGER_SCHEMA.md v1.
 #
 # Zero third-party dependencies. Python 3.11+ (uses tomllib, datetime UTC).
 """
@@ -38,7 +40,11 @@ MAX_PARAMS_BYTES = 4 * 1024
 MAX_NOTE_CHARS = 1024
 
 VALID_STATUS = frozenset({"ok", "fail", "denied", "error", "partial"})
-VALID_TOOL = frozenset({"nodepanel", "soloctl"})  # readers accept more; writers use these
+# D5: nodepanel is retired in favor of nodectl; writers switch immediately,
+# but "nodepanel" stays accepted here for one transition period so entries
+# already on disk (or emitted by an unrebuilt caller) still read as valid.
+# Drop it once every consumer has re-vendored past the rename.
+VALID_TOOL = frozenset({"nodectl", "soloctl", "nodepanel"})  # readers accept more; writers use these
 
 
 # --------------------------------------------------------------------------
@@ -159,15 +165,15 @@ def _now_rfc3339() -> str:
 class Ledger:
     """Append-only ledger writer for one tool. Instantiate once per process.
 
-        led = Ledger(root="/var/lib/nodepanel", tool="nodepanel",
-                     scrub_patterns_path="/var/lib/nodepanel/library/"
+        led = Ledger(root="/var/lib/nodectl", tool="nodectl",
+                     scrub_patterns_path="/var/lib/nodectl/library/"
                                          ".soloctl/scrub-patterns.toml")
         led.write(actor="human:sarge", action="payload.fire",
                   target="node:ai-worker-03", status="ok", exit=0,
                   params={"script": "join.sh", "review": "approved"})
 
     root layout: <root>/ledger/YYYY-MM.jsonl  (monthly rotation).
-    fsync defaults True for nodepanel (security log), pass fsync=False for
+    fsync defaults True for nodectl (security log), pass fsync=False for
     soloctl if append latency matters.
     """
 

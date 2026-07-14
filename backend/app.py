@@ -47,7 +47,7 @@ def create_app() -> FastAPI:
     app.state.host_key_service = HostKeyService(app.state.ssh_service)
     app.state.transfer_service = TransferService(app.state.ssh_service, settings)
     app.state.git_credential_service = GitCredentialService(app.state.ssh_service, settings)
-    app.state.ledger = Ledger(root=str(settings.ledger_root.parent), tool="nodepanel")
+    app.state.ledger = Ledger(root=str(settings.ledger_root.parent), tool="nodectl")
     # G3 port stubs (roadmap §4A): consumed here so the seam is real; every
     # method refuses until Stage 2/G5 wires a real in-process adapter.
     app.state.artifact_port = build_artifact_port()
