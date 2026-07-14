@@ -8,9 +8,12 @@ from fastapi.templating import Jinja2Templates
 
 from ..auth import require_admin, require_csrf, require_user
 from ..config import settings
+from ..idempotent_node_action import IdempotencyConflictError, run_node_action_idempotent
 from ..ssh_client import get_node_manifests, get_virsh_list, run_factory_script
 from ..ucc_events import emit_event
 from .ui import list_staging_files
+
+IDEMPOTENCY_KEY_HEADER = "X-Idempotency-Key"
 
 
 router = APIRouter(prefix="/api")
@@ -95,11 +98,26 @@ async def node_action(
     drives allowlisted factory-side shell scripts over SSH via
     run_factory_script. Operator-only, admin+CSRF gated, diagnostic_only —
     never reachable from a future FactoryPort adapter. See
-    tests/unit/test_infra_fence.py."""
+    tests/unit/test_infra_fence.py.
+
+    An optional X-Idempotency-Key header opts into replay/conflict handling
+    (M-b, D2): identical key+inputs replay the stored result instead of
+    re-running the action; the same key with different inputs refuses
+    (409). Omitting the header keeps today's run-every-time behavior."""
+    idempotency_key = request.headers.get(IDEMPOTENCY_KEY_HEADER)
     try:
-        result = await run_factory_script(node_name=node_name, action=action)
+        if idempotency_key:
+            from ..db import get_db
+            with get_db() as conn:
+                result = await run_node_action_idempotent(
+                    conn, node_name=node_name, action=action,
+                    idempotency_key=idempotency_key, actor_username=user.username)
+        else:
+            result = await run_factory_script(node_name=node_name, action=action)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except IdempotencyConflictError as exc:
+        raise HTTPException(status_code=409, detail=exc.problem["message"]) from exc
     except Exception as exc:
         return render_command_result(
             request,
@@ -109,25 +127,28 @@ async def node_action(
             return_code=1,
         )
 
-    request.app.state.ledger.write(
-        actor=f"user:{user.username}",
-        action=f"factory.{action}",
-        target=f"node:{node_name}",
-        status="ok" if result["exit_code"] == 0 else "error",
-        exit=result["exit_code"],
-        params={"command": result["command"]},
-        note=result["stderr"] if result["exit_code"] else "",
-    )
-    # Dual-write (roadmap §4A "Add port + envelope stubs"): the legacy
-    # ledger above stays the primary, unchanged read path; this is additive.
-    emit_event(
-        settings.ucc_events_root / "ucc.jsonl",
-        event_type=f"node.{action}_completed" if result["exit_code"] == 0 else f"node.{action}_failed",
-        subject_kind="node",
-        subject_name=node_name,
-        actor_username=user.username,
-        payload={"action": action, "exit_code": result["exit_code"]},
-    )
+    if not result.get("_replayed"):
+        # A replay is a cache hit, not a re-run: logging it again would
+        # misrepresent history (the action did not execute a second time).
+        request.app.state.ledger.write(
+            actor=f"user:{user.username}",
+            action=f"factory.{action}",
+            target=f"node:{node_name}",
+            status="ok" if result["exit_code"] == 0 else "error",
+            exit=result["exit_code"],
+            params={"command": result["command"]},
+            note=result["stderr"] if result["exit_code"] else "",
+        )
+        # Dual-write (roadmap §4A "Add port + envelope stubs"): the legacy
+        # ledger above stays the primary, unchanged read path; this is additive.
+        emit_event(
+            settings.ucc_events_root / "ucc.jsonl",
+            event_type=f"node.{action}_completed" if result["exit_code"] == 0 else f"node.{action}_failed",
+            subject_kind="node",
+            subject_name=node_name,
+            actor_username=user.username,
+            payload={"action": action, "exit_code": result["exit_code"]},
+        )
     return render_command_result(
         request,
         command=result["command"],

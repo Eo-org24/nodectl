@@ -26,6 +26,10 @@ FENCED_SYMBOLS = {
     "run_factory_script": {
         REPO_ROOT / "backend" / "ssh_client.py",
         REPO_ROOT / "backend" / "routers" / "api.py",
+        # M-b: idempotent_node_action.py is a standalone-route helper for
+        # node_action, not a port/adapter — it's only ever called from the
+        # already-fenced api.py route. Deliberately extended, not weakened.
+        REPO_ROOT / "backend" / "idempotent_node_action.py",
     },
     "get_virsh_list": {
         REPO_ROOT / "backend" / "ssh_client.py",
