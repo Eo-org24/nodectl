@@ -94,3 +94,36 @@ these two are lower-confidence, so flagged instead):
 `Dockerfile`, `docker-compose.yml`, `build.sh`, `tailwind.config.js`, `pytest.ini`,
 `requirements.txt`, `.gitignore`/`.dockerignore`, `README.md`, `docs/*.md` — these
 configure or document the app rather than being a component of it.
+
+## Agent-instruction-file reconciliation (M-c, last item)
+
+`AGENTS.md`/`CLAUDE.md`/`RULES.md`/`MISSION.md` reviewed and rewritten — not blanket-deleted — for
+contradictions with the current, locked baseline:
+
+- **`AGENTS.md` (repo-local)** was a pre-UCC, single-purpose "wire the htmx frontend" operating
+  manual (named the repo `nodepanel`, pointed at `backend/main.py` for routes, claimed `fabric` is
+  the only SSH path). Replaced with a trimmed copy of the shared `/UCC/AGENTS.md` template (§0/§1/§2
+  verbatim, only this repo's §3 block, §4), carrying forward the M-c note explaining what was wrong
+  with the old version so it isn't silently lost.
+- **`CLAUDE.md`** didn't exist in this repo yet — added as a copy of the shared root `CLAUDE.md`
+  (which needed one fix of its own: it used "this repo's vendored ledger" as an example of
+  load-bearing code to be careful with, which is exactly the claim that turned out to be false —
+  reworded to tell the reader to verify a vendoring claim rather than trust it, both here and in the
+  shared template so the other two repos get the corrected wording too).
+- **`RULES.md`**: two of six original rules were factually wrong by M-c — rule 4 ("the dashboard
+  does not possess a database") is directly contradicted by `backend/db.py`/`nodepanel.db`, load-bearing
+  for git credentials, host keys, and M-b's idempotency records; rule 3 ("route all system commands
+  through `run_factory_script`/`fabric`") predates `backend/services/ssh.py`, a second,
+  `paramiko`-based SSH surface that now handles git deploy keys/transfers/host-keys and isn't fabric
+  at all. Rewritten in place with the corrections, not deleted — a "hard constraints" file that's
+  actively wrong is worse than one that's merely dated.
+- **`MISSION.md`**: described phase 1–4 of the original prototype build-out. Phases 1–3 are done;
+  phase 4 (`/api/nodes/create`, a worker-creation form) was never built and, per the now-locked
+  narrow-fork scope (no real cross-module adapters / canonical record store), is Stage-2 scope, not
+  live authorization to build it now. Rewritten to point at `AGENTS.md`/the roadmap as the actual
+  current mission driver instead of a stale phase list.
+
+This is the same category of problem found and fixed mid-flight during the D5 and dev-root work
+(`ledger.py`'s stale vendoring claim) — expect the same kind of check to be worth doing in
+`Artifact-compiler`'s `HANDOFF_NOTES.md` and VM-Factory's `AGENTS.md` / `ai-worker-factory-plan.md` /
+`factory-panel-convergence.md` / `FIRE-AWAY.md` before assuming those are current either.
