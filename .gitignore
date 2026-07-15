@@ -1,6 +1,7 @@
 .venv/
 __pycache__/
 *.pyc
+*.egg-info/
 config.json
 
 # Data Plane
@@ -11,6 +12,9 @@ data/
 staging/
 inbox/
 ledger/
+events/
 secrets/
+uploads/
+.ucc-dev/
 .env
 tailwindcss-linux-x64

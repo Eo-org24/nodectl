@@ -150,7 +150,7 @@ def test_rendered_html_and_ledger_do_not_leak_secrets(app, app_settings):
     assert "PRIVATE-KEY" not in html
     assert "ghp_secret" not in html
 
-    ledger = Ledger(root=str(app_settings.ledger_root.parent), tool="nodepanel")
+    ledger = Ledger(root=str(app_settings.ledger_root.parent), tool="nodectl")
     ledger.write(
         actor="human:test",
         action="git.deploy",

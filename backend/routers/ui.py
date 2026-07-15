@@ -28,6 +28,7 @@ def template_context(request: Request, **extra: object) -> dict[str, object]:
 
 
 def tab_context(request: Request, active_tab: str) -> dict[str, object]:
+    """Standalone UI context; fenced because it reads hypervisor state directly."""
     context = template_context(request, active_tab=active_tab, read_only=True)
     user = context["session_user"]
     target_id = user.terminal_target if user else "factory"

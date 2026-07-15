@@ -28,11 +28,20 @@ class Settings(BaseSettings):
     viewer_username: str = "viewer"
     viewer_password: str = "change-me-viewer"
 
-    data_root: Path = Path("data")
-    staging_root: Path = Path("staging")
-    inbox_root: Path = Path("inbox")
-    ledger_root: Path = Path("ledger")
-    database_path: Path = Path("data/nodepanel.db")
+    # M-c dev-root isolation: local, unconfigured runs keep all mutable
+    # runtime state under one git-ignored root instead of five loose
+    # directories mixed into the source tree. Every deployed environment
+    # (docker-compose, tests) already overrides every one of these paths
+    # explicitly, so changing the bare default only affects an ad-hoc local
+    # `uvicorn`/`python -m backend.cli` run with no `.env` — additive, no
+    # migration needed.
+    dev_root: Path = Path(".ucc-dev")
+    data_root: Path = Path(".ucc-dev/data")
+    staging_root: Path = Path(".ucc-dev/staging")
+    inbox_root: Path = Path(".ucc-dev/inbox")
+    ledger_root: Path = Path(".ucc-dev/ledger")
+    ucc_events_root: Path = Path(".ucc-dev/events")
+    database_path: Path = Path(".ucc-dev/data/nodepanel.db")
 
     factory_host: str = "127.0.0.1"
     factory_port: int = 22
@@ -41,7 +50,7 @@ class Settings(BaseSettings):
     factory_ssh_key_path: Path = Path("secrets/factory_ssh_key")
 
     vm_ssh_key_path: Path = Path("secrets/vm_ssh_key")
-    ssh_known_hosts_path: Path = Path("data/known_hosts")
+    ssh_known_hosts_path: Path = Path(".ucc-dev/data/known_hosts")
     ssh_use_agent: bool = False
     ssh_connect_timeout_seconds: int = 10
 
@@ -62,7 +71,7 @@ class Settings(BaseSettings):
         return value
 
     def ensure_directories(self) -> None:
-        for path in (self.data_root, self.staging_root, self.inbox_root, self.ledger_root):
+        for path in (self.data_root, self.staging_root, self.inbox_root, self.ledger_root, self.ucc_events_root):
             path.mkdir(parents=True, exist_ok=True)
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
         self.ssh_known_hosts_path.parent.mkdir(parents=True, exist_ok=True)

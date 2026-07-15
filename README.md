@@ -35,6 +35,8 @@ Run tests:
 .venv/bin/python -m pytest -q
 ```
 
+Fork-gate remediation baseline: **98 passed**.
+
 Run the app locally:
 
 ```bash
@@ -76,6 +78,37 @@ Set users in `.env`:
 - `VIEWER_PASSWORD`
 
 The current backend maps those two configured accounts to roles in [`backend/auth.py`](backend/auth.py).
+
+## UCC conformance
+
+Conforms to **ucc-contracts v0.2.0** (git tag, ucc-contracts is now its own repo), vendored at
+`third_party/ucc-contracts/` (schemas, lifecycle transition tables, ID/hash/path
+primitives — no domain code). `tests/contracts/` asserts this repo's own
+(de)serialization and validation matches the pinned contracts exactly;
+bumping the vendored copy is deliberate and version-gated, never silent.
+
+## Standalone status and limitations
+
+This is a **UCC Stage-1 conformant standalone tool**. It runs and is tested on its own.
+It is *not* the UCC product and does not integrate with the other UCC repos yet.
+
+- **Shared contracts:** pinned to `ucc-contracts v0.2.0` (vendored under
+  `third_party/ucc-contracts/`, export set per its VENDOR-MANIFEST.md). Never edited locally.
+- **Placeholder entity IDs (D4):** `ucc.event` records carry `subject.id` values that are
+  **deterministic sha256-derived placeholders**, not canonical prefixed ULIDs. Real IDs
+  arrive with the record layer in Stage 2. **Do not build external references on them.**
+- **Events are dual-written:** the legacy ledger *and* a schema-conformant `ucc.event`
+  stream. Neither replaces the other yet.
+- **`producer_sequence`** is per-producer, not globally ordered, and not race-safe under
+  concurrent writers (matching the legacy ledgers).
+- **Fenced paths:** direct-infrastructure and shell paths are retained for standalone use
+  only, unreachable from any port (AST call-site tests). Not an integration surface.
+- **Domain schemas are not authored yet** (~26 records; standards reference §17). They gate
+  the vertical proof, not this baseline.
+- **Ports are stubs.** `ArtifactPort`/`FactoryPort` are consumed at `app.state.*_port`, but
+  every method refuses `DEPENDENCY_UNAVAILABLE` by design. No cross-module call is wired.
+- **`nodepanel` naming survives by design** in the SQLite filename, the `factory_user`
+  account, and `VALID_TOOL`'s legacy entry — a deliberate D5 transition window.
 
 ## Additional Documentation
 

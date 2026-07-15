@@ -41,8 +41,14 @@ class GitCredentialService:
             raise GitCredentialError("invalid_credential_id", "Credential ID contains unsupported characters.")
         return credential_id
 
-    def _remote_key_path(self, credential_id: str) -> str:
-        return f"~/.ssh/nodepanel/{credential_id}"
+    def _remote_key_path(self, remote_home: str, credential_id: str) -> str:
+        return f"{remote_home}/.ssh/nodectl/{credential_id}"
+
+    def _legacy_remote_key_path(self, remote_home: str, credential_id: str) -> str:
+        # D5: nodepanel is retired, but keys provisioned before the rename
+        # still live under the old path on already-deployed nodes — scrub()
+        # must still be able to find and remove them.
+        return f"{remote_home}/.ssh/nodepanel/{credential_id}"
 
     def _remote_home(self, target: SshTarget) -> str:
         return f"/home/{target.user}"
@@ -64,7 +70,7 @@ class GitCredentialService:
         slug = self.validate_repo_slug(repository_slug)
         cred_id = self.validate_credential_id(credential_id)
         remote_home = self._remote_home(target)
-        remote_key_path = f"{remote_home}/.ssh/nodepanel/{cred_id}"
+        remote_key_path = self._remote_key_path(remote_home, cred_id)
         if not self.settings.github_known_hosts_entry:
             raise GitCredentialError("missing_github_host_key", "GitHub known_hosts entry is not configured.")
         temp_key = tempfile.NamedTemporaryFile("w", delete=False, encoding="utf-8")
@@ -76,13 +82,13 @@ class GitCredentialService:
             temp_known_hosts.flush()
             client, sftp = self.ssh_service.sftp(target)
             try:
-                self.ssh_service.run(target, ["mkdir", "-p", f"{remote_home}/.ssh/nodepanel"])
+                self.ssh_service.run(target, ["mkdir", "-p", f"{remote_home}/.ssh/nodectl"])
                 remote_tmp = f"{remote_key_path}.tmp"
                 sftp.put(temp_key.name, remote_tmp)
                 self.ssh_service.run(target, ["chmod", "0600", remote_tmp])
                 self.ssh_service.run(target, ["mv", remote_tmp, remote_key_path])
                 self.ssh_service.run(target, ["mkdir", "-p", f"{remote_home}/.ssh"])
-                github_known_hosts = f"{remote_home}/.ssh/nodepanel_github_known_hosts"
+                github_known_hosts = f"{remote_home}/.ssh/nodectl_github_known_hosts"
                 sftp.put(temp_known_hosts.name, github_known_hosts)
                 repo_name = slug.split("/", 1)[1]
                 remote_url = f"git@github.com:{slug}.git"
@@ -126,10 +132,15 @@ class GitCredentialService:
     def scrub(self, *, target: SshTarget, credential_id: str, repository_slug: str) -> dict[str, str]:
         cred_id = self.validate_credential_id(credential_id)
         remote_home = self._remote_home(target)
-        remote_key_path = f"{remote_home}/.ssh/nodepanel/{cred_id}"
         repo_name = self.validate_repo_slug(repository_slug).split("/", 1)[1]
         repo_path = f"{remote_home}/repos/{repo_name}"
-        self.ssh_service.run(target, ["rm", "-f", remote_key_path])
+        # D5 dual-accept: the credential may have been provisioned before the
+        # nodepanel->nodectl rename, in which case its key sits at the old
+        # path. `rm -f` is a no-op on a path that doesn't exist, so trying
+        # both is safe and requires no persisted record of which path a given
+        # credential used.
+        self.ssh_service.run(target, ["rm", "-f", self._remote_key_path(remote_home, cred_id)])
+        self.ssh_service.run(target, ["rm", "-f", self._legacy_remote_key_path(remote_home, cred_id)])
         self.ssh_service.run(target, ["git", "config", "--unset-all", "core.sshCommand"], cwd=repo_path)
         verification = self.ssh_service.run(target, ["git", "ls-remote", "origin", "HEAD"], cwd=repo_path)
         if verification["exit_code"] == 0:

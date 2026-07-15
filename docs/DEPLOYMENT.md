@@ -8,6 +8,7 @@ NodePanel is intended to run behind an authenticated reverse proxy or a private 
 - `STAGING_ROOT=/app/staging`
 - `INBOX_ROOT=/app/inbox`
 - `LEDGER_ROOT=/app/ledger`
+- `UCC_EVENTS_ROOT=/app/events`
 - `DATABASE_PATH=/app/data/nodepanel.db`
 
 ## Secrets

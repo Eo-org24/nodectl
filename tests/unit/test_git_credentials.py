@@ -124,3 +124,45 @@ def test_git_credentials_schema_does_not_persist_remote_key_paths(app_settings):
             for row in conn.execute("PRAGMA table_info(git_credentials)")
         }
     assert "remote_path" not in columns
+
+
+def test_provision_writes_key_under_new_nodectl_path(app_settings, target):
+    fake_ssh = FakeSSHService(app_settings)
+    service = GitCredentialService(fake_ssh, app_settings)
+
+    service.provision_deploy_key(
+        target=target,
+        repository_slug="owner/repo",
+        environment_name="prod",
+        credential_id="cred-004",
+        private_key="PRIVATE-KEY",
+        public_key="PUBLIC-KEY",
+    )
+
+    mkdir_targets = [argv[2] for argv, _ in fake_ssh.commands if argv[:2] == ("mkdir", "-p")]
+    assert any(t.endswith("/.ssh/nodectl") for t in mkdir_targets)
+    assert not any("/.ssh/nodepanel" in t for t in mkdir_targets)
+
+
+def test_scrub_removes_both_new_and_legacy_nodepanel_paths(app_settings, target):
+    # D5 dual-accept: a credential provisioned before the rename has its key
+    # sitting under the old ~/.ssh/nodepanel/ path on the remote node. scrub()
+    # must still find and remove it even though provisioning now writes new
+    # credentials under ~/.ssh/nodectl/ instead.
+    fake_ssh = FakeSSHService(app_settings)
+    service = GitCredentialService(fake_ssh, app_settings)
+    service.provision_deploy_key(
+        target=target,
+        repository_slug="owner/repo",
+        environment_name="prod",
+        credential_id="cred-005",
+        private_key="PRIVATE-KEY",
+        public_key="PUBLIC-KEY",
+    )
+
+    result = service.scrub(target=target, credential_id="cred-005", repository_slug="owner/repo")
+
+    assert result["status"] == "scrubbed"
+    rm_targets = [argv[2] for argv, _ in fake_ssh.commands if argv[:2] == ("rm", "-f")]
+    assert any("/.ssh/nodectl/cred-005" in t for t in rm_targets)
+    assert any("/.ssh/nodepanel/cred-005" in t for t in rm_targets)
