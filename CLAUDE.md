@@ -1,7 +1,8 @@
 # CLAUDE.md
 
-Guidance for Claude Code in this repository. This is a UCC Stage-1 repo
-(`nodectl` / `Artifact-compiler` / `VM-Factory` — this file ships in all three).
+Guidance for Claude Code in this repository. This is the nodectl-derived UCC Stage 2
+integration line; the preserved Stage-1 standalone line remains at
+`Eowerd24/nodectl@nodectl-phase0-conformant-standalone`.
 
 ## Read these first (authoritative, in precedence order)
 
@@ -17,8 +18,11 @@ vendored `ucc-contracts` disagrees with any prose, the code wins.
 
 ## The five things to never get wrong
 
-1. **Fork scope is NARROW** — no UCC product, no repo merge, no broker/service/DB,
-   no real cross-module adapters. That's Stage 2. (AGENTS.md §1.1)
+1. **Stage 2 scope is bounded and authorized** — real in-process adapters, canonical
+   records/schemas, a disposable projection, the application-service skeleton, one
+   fixture-backed operator view, and XDG resolution are in scope. Broker/network module
+   APIs, canonical server DB, repo merge, multi-operator auth, full vertical proof, and a
+   general remote terminal are not. (AGENTS.md §1.1)
 2. **Fail closed over fabricate** — refuse with a typed `ucc.problem` rather than
    invent an ID, hash, token, or state. (AGENTS.md §1.2)
 3. **Don't cross the fences** — the standalone-only infra/shell paths listed in
@@ -48,6 +52,7 @@ vendored `ucc-contracts` disagrees with any prose, the code wins.
 
 ## Out of scope
 
-See AGENTS.md §4. If a task appears to need a real adapter, canonical records, the
-domain schemas, a projection builder, or any networked component, stop and flag it
-against the roadmap rather than building it.
+See AGENTS.md §4. Real in-process adapters, canonical records/domain schemas, and the
+disposable projection are Stage 2 work here. If a task needs a broker/network module API,
+canonical server database, repo merge, full vertical proof, or trusted-path terminal, stop
+and flag it against the roadmap rather than building it.

@@ -18,10 +18,13 @@ what to re-sync here if the shared core changes.
 
 ## 0. What this repo is
 
-A **UCC Stage-1 conformant standalone tool.** It runs and is tested on its own, and it
-conforms to a shared contract layer so three repos can later integrate. The fork onto the
-UCC line has **not** been cut yet. Pinned shared-contract version: **`ucc-contracts v0.2.0`**
-(vendored under `third_party/ucc-contracts/`).
+The **UCC Stage 2 integration line**, cut from the Stage-1 conformant standalone tag
+`nodectl-phase0-conformant-standalone` in `Eowerd24/nodectl`. It remains independently
+runnable while integrating the three modules through the shared contract layer. Pinned
+shared-contract version: **`ucc-contracts v0.2.0`** (vendored under
+`third_party/ucc-contracts/`). Pinned peer baselines are
+`Eowerd24/Artifact-compiler@phase0-conformant` and
+`Eowerd24/VM-Factory@phase0-conformant`.
 
 Two documents outrank this file and each other in this order — read them before non-trivial work:
 
@@ -34,11 +37,15 @@ table (D1–D6) or its conflict-resolution table.
 
 ---
 
-## 1. Shared core — non-negotiable rules (identical in all three repos)
+## 1. UCC-line core — non-negotiable rules
 
-1. **Fork scope is NARROW.** Do **not**: build the UCC product, merge repos, add a broker /
-   network service / canonical database, or wire real cross-module adapters. Those are Stage 2
-   (post-fork). Port adapters here may stay honest stubs.
+1. **Stage 2 scope is bounded and now authorized.** Implement the roadmap §7 seam: real
+   in-process `ArtifactPort`/`FactoryPort` adapters over the pinned peers, canonical record
+   types and their lifecycle schemas, a disposable SQLite projection builder, the UCC
+   application-service skeleton, one fixture-backed operator view, and the XDG path resolver.
+   Keep adapters in-process by default with the tested CLI fallback. Do **not** add a broker,
+   socket/HTTP module API, canonical server database, repo merge, multi-operator auth, full
+   vertical proof, or general remote terminal. Those remain later-roadmap work.
 2. **Fail closed over fabricate.** If you lack a real ID, hash, token, publication state, or
    record, refuse with a typed `ucc.problem` — never invent one. This is the same principle
    behind the vault and dry-run fixes; apply it everywhere, especially in port methods.
@@ -109,9 +116,10 @@ table (D1–D6) or its conflict-resolution table.
   - `backend/services/factory.py`: `hypervisor_snapshot()` (`virsh list --all`);
   - `backend/routers/ui.py`: `tab_context()` (calls `hypervisor_snapshot` for the standalone tab);
   - `/api/terminal/ws` echo stub.
-- **Ports:** `backend/ports/artifact_port_stub.py`, `factory_port_stub.py`, consumed via
-  `app.state.artifact_port` / `app.state.factory_port`. **All methods refuse `DEPENDENCY_UNAVAILABLE`
-  by design** — real adapters are Stage 2. The stubs must touch none of the fenced symbols above.
+- **Ports at the branch point:** `backend/ports/artifact_port_stub.py`, `factory_port_stub.py`,
+  consumed via `app.state.artifact_port` / `app.state.factory_port`. They begin as honest
+  `DEPENDENCY_UNAVAILABLE` stubs. Stage 2 replaces them incrementally with real in-process
+  adapters over the pinned peers; neither a stub nor a real adapter may touch a fenced symbol.
 - **Events:** dual-write via `backend/ucc_events.py`, called from the `node_action` route — **not**
   from inside `backend/ledger.py`. `deterministic_id()` (was `_deterministic_id`, made public in M-b)
   derives placeholder subject/actor ids.
@@ -152,15 +160,18 @@ table (D1–D6) or its conflict-resolution table.
 - **Tests:** `pytest`; suites under `tests/unit`, `tests/integration`, `tests/contracts`.
 - **M-c hygiene done:** nested `nodectl/nodectl/` duplicate removed (confirmed dead first); `uploads/`
   untracked (content stays on disk).
-- **Pending:** none — M-c is complete for this repo as of this change. Next is the fork gate (§6 of
-  the roadmap), gated on all three repos' G1–G4 and the full §5 conformance suite.
+- **Pending:** the bounded Stage 2 sequence in roadmap §7. The fork gate and all Stage-1
+  conformance suites are complete.
 
 ---
 
-## 4. Out of scope (do not do here)
+## 4. Out of scope on the UCC line
 
-Real cross-module adapters; canonical record stores; the ~26 domain schemas; projection builder;
-UCC application services; broker / network API / server DB; repo merges; multi-operator auth; any
-general remote terminal in a trusted path; frontend or deployment-topology decisions beyond the
-already-approved Vue redesign in progress under `frontend/`. All of these are Stage 2 or a later
-roadmap. If a task seems to require one, stop and flag it against the roadmap.
+Stage 2 explicitly includes real **in-process** cross-module adapters, canonical records and their
+domain schemas, a disposable projection builder, the UCC application-service skeleton, one
+fixture-backed operator view, and the XDG resolver. It does **not** include a broker, message bus,
+socket/HTTP module API, canonical server database, repo merge, multi-operator auth, the full first
+vertical proof, the mandatory failure matrix, or a real disposable-VM run. A general remote
+terminal remains permanently fenced from every trusted/automated path. Frontend and final
+deployment topology decisions beyond the already-approved Vue redesign remain open. If work falls
+outside roadmap §7, stop and record the proposed expansion before implementing it.
