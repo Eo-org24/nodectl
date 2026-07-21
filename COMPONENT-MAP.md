@@ -10,7 +10,7 @@ tagged with exactly one of the nine categories the roadmap defines:
 `factory-adapter` (Stage-2 seam toward VM-Factory) · `diagnostic-only`
 (read-only, no mutation) · `legacy-standalone` (fenced — must never be
 reachable from a port, per `tests/unit/test_infra_fence.py`) · `remove`
-(dead, flagged not yet deleted).
+(dead, removed before the fork after the deterministic filename check).
 
 This is a snapshot as of M-c (2026-07-15). Re-derive from the code before
 trusting it in a later session — do not assume it stays accurate as the
@@ -73,21 +73,15 @@ repo changes.
 | `static/` (`input.css`, `output.css`, `vapor.css`, `vendor/htmx.min.js`, `vendor/xterm*`) | presentation | Built/vendored front-end assets for the Jinja UI. |
 | `frontend/src/**` (Vue 3 + TS) | legacy-standalone | **In-progress redesign, not dead.** Conditionally mounted at `/app` only if `frontend/dist/assets` exists (`app.py`); 404s otherwise. Backed by `Document pack/NodePanel Vue Frontend Redesign.docx` + `plan.txt` (still present at repo root). Not yet the default UI — tag may change to `presentation` once it replaces the Jinja UI, or the Jinja UI moves to `legacy-standalone` if the Vue rewrite ships first. |
 
-## Flagged, not yet actioned (`remove` candidates)
+## Resolved `remove` candidates
 
-Found while building this map — not referenced from any live code (`grep -rn` across
-`backend/` turns up nothing for either), but not deleted here per the "list findings,
-don't blanket-delete" rule (same discipline used for the nested-duplicate removal in
-M-c, which *was* deleted only after confirming via diff it was a dead, superseded copy —
-these two are lower-confidence, so flagged instead):
-
-- `gpt-ascii.html` (repo root) — no route serves it, no template includes it.
-- `library/manifest.json`, `library/scripts/approved/*.sh`, `library/scripts/drafts/*.sh`
-  — `ssh_client.py`'s allowlist for `run_factory_script` is not sourced from this
-  directory (grepped: nothing in `backend/` references `library/`). Possibly the
-  intended home for a future script-allowlist manifest that was never wired up, or a
-  leftover from before the allowlist moved in-code — worth a direct question to the
-  repo owner before deleting, not an assumption either way.
+- `gpt-ascii.html` was dead: no route served it and no template included it.
+- The in-code factory action allowlist names `assign`, `snapshot`, and `destroy`.
+  None matched `library/scripts/approved/manifest-tool.sh`,
+  `library/scripts/approved/tailscale-node-join.sh`, or
+  `library/scripts/drafts/experimental-gpu-check.sh`. Under the audit's deterministic
+  rule there was no deployment coupling, so `library/manifest.json` and
+  `library/scripts/` were deleted before the fork.
 
 ## Not part of the taxonomy (build/ops tooling)
 

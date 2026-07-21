@@ -1,11 +1,10 @@
 """Shared ucc.event emission (G2, roadmap §4A "Add port + envelope stubs").
 
 Dual-writes a schema-conformant `ucc.event` alongside `Ledger.write()` calls.
-`backend/ledger.py` is a vendored module ("source of truth lives in the
-soloctl repo... do NOT edit in place"), so this lives as a separate sibling
-module called from the route/service layer instead of touching the vendored
-writer. The legacy ledger stays the primary, unchanged read path; this is
-additive.
+`backend/ledger.py` is nodectl-owned and has diverged from soloctl's smaller
+ledger module; this separate sibling preserves the legacy writer's behavior
+while the route/service layer adds the new event stream. The legacy ledger
+stays the primary, unchanged read path; this is additive.
 
 nodectl has no canonical `node_`/`act_` ULID ids yet (`ucc.node` is still
 queued per UCC-Standards §17) — node names and usernames are the only

@@ -19,30 +19,43 @@ def _dependency_unavailable() -> PortResult:
                       message=_NOT_WIRED, retryable=True)
 
 
+def _validation_refusal(message: str) -> PortResult:
+    return PortResult(ok=False, disposition="refused",
+                      refusal_code=RefusalCode.VALIDATION_ERROR,
+                      message=message, retryable=False)
+
+
+def _require_keys(request: dict, *keys: str) -> PortResult | None:
+    missing = [key for key in keys if key not in request]
+    if missing:
+        return _validation_refusal(f"missing required field(s): {', '.join(missing)}")
+    return None
+
+
 class ArtifactPortStub:
     """`isinstance(ArtifactPortStub(), ArtifactPort)` holds via the
     Protocol's structural check (see tests/unit/test_port_stubs.py)."""
 
     def get_revision(self, request: dict) -> PortResult:
-        return _dependency_unavailable()
+        return _require_keys(request, "revision_id") or _dependency_unavailable()
 
     def resolve_publication(self, request: dict) -> PortResult:
-        return _dependency_unavailable()
+        return _require_keys(request, "publication_id") or _dependency_unavailable()
 
     def verify_execution_eligibility(self, request: EligibilityRequest) -> EligibilityResult:
         return EligibilityResult(eligible=False, refusal_code=RefusalCode.DEPENDENCY_UNAVAILABLE)
 
     def create_script_revision(self, request: dict) -> PortResult:
-        return _dependency_unavailable()
+        return _require_keys(request, "artifact_id", "content") or _dependency_unavailable()
 
     def approve_revision(self, request: dict) -> PortResult:
-        return _dependency_unavailable()
+        return _require_keys(request, "revision_id") or _dependency_unavailable()
 
     def publish_revision(self, request: dict) -> PortResult:
-        return _dependency_unavailable()
+        return _require_keys(request, "revision_id", "channel") or _dependency_unavailable()
 
     def withdraw_publication(self, request: dict) -> PortResult:
-        return _dependency_unavailable()
+        return _require_keys(request, "publication_id") or _dependency_unavailable()
 
 
 def build_artifact_port() -> ArtifactPort:

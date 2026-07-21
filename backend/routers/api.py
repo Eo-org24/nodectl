@@ -8,7 +8,9 @@ from fastapi.templating import Jinja2Templates
 
 from ..auth import require_admin, require_csrf, require_user
 from ..config import settings
-from ..idempotent_node_action import IdempotencyConflictError, run_node_action_idempotent
+from ..idempotent_node_action import (
+    IdempotencyConflictError, OutcomeUnknownError, run_node_action_idempotent,
+)
 from ..ssh_client import get_node_manifests, get_virsh_list, run_factory_script
 from ..ucc_events import emit_event
 from .ui import list_staging_files
@@ -118,6 +120,8 @@ async def node_action(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except IdempotencyConflictError as exc:
         raise HTTPException(status_code=409, detail=exc.problem["message"]) from exc
+    except OutcomeUnknownError as exc:
+        raise HTTPException(status_code=409, detail=exc.problem) from exc
     except Exception as exc:
         return render_command_result(
             request,

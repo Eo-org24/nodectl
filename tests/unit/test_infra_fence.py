@@ -24,25 +24,25 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 # symbol -> files allowed to reference it (definition site + known standalone callers)
 FENCED_SYMBOLS = {
     "run_factory_script": {
-        REPO_ROOT / "backend" / "ssh_client.py",
-        REPO_ROOT / "backend" / "routers" / "api.py",
+        REPO_ROOT / "backend" / "ssh_client.py",  # definition site
+        REPO_ROOT / "backend" / "routers" / "api.py",  # fenced standalone route
         # M-b: idempotent_node_action.py is a standalone-route helper for
         # node_action, not a port/adapter — it's only ever called from the
         # already-fenced api.py route. Deliberately extended, not weakened.
         REPO_ROOT / "backend" / "idempotent_node_action.py",
     },
     "get_virsh_list": {
-        REPO_ROOT / "backend" / "ssh_client.py",
-        REPO_ROOT / "backend" / "routers" / "api.py",
+        REPO_ROOT / "backend" / "ssh_client.py",  # definition site
+        REPO_ROOT / "backend" / "routers" / "api.py",  # standalone diagnostic API
     },
     "get_node_manifests": {
-        REPO_ROOT / "backend" / "ssh_client.py",
-        REPO_ROOT / "backend" / "routers" / "api.py",
+        REPO_ROOT / "backend" / "ssh_client.py",  # definition site
+        REPO_ROOT / "backend" / "routers" / "api.py",  # standalone node listing
     },
     "hypervisor_snapshot": {
-        REPO_ROOT / "backend" / "services" / "factory.py",
-        REPO_ROOT / "backend" / "routers" / "api.py",
-        REPO_ROOT / "backend" / "routers" / "ui.py",
+        REPO_ROOT / "backend" / "services" / "factory.py",  # definition site
+        REPO_ROOT / "backend" / "routers" / "api.py",  # diagnostic API caller
+        REPO_ROOT / "backend" / "routers" / "ui.py",  # standalone dashboard caller
     },
 }
 

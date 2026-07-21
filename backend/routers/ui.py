@@ -28,6 +28,11 @@ def template_context(request: Request, **extra: object) -> dict[str, object]:
 
 
 def tab_context(request: Request, active_tab: str) -> dict[str, object]:
+    """Build standalone UI context, including fenced hypervisor observation.
+
+    STANDALONE-ONLY / LEGACY call site: a future port-backed UI must use
+    FactoryPort rather than extending this direct-infrastructure path.
+    """
     context = template_context(request, active_tab=active_tab, read_only=True)
     user = context["session_user"]
     target_id = user.terminal_target if user else "factory"

@@ -169,6 +169,10 @@ def _run_factory_action_sync(node_name: str, action: str) -> dict[str, Any]:
 
 
 async def run_factory_script(node_name: str, action: str) -> dict[str, Any]:
+    """Run one allowlisted factory action for the fenced standalone route.
+
+    STANDALONE-ONLY / LEGACY: never call this from a FactoryPort adapter.
+    """
     return await asyncio.to_thread(_run_factory_action_sync, node_name, action)
 
 

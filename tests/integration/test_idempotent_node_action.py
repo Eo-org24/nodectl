@@ -3,8 +3,12 @@ the §5 idempotent-replay and idempotency-conflict fixtures, wired against a
 real nodectl operation."""
 from __future__ import annotations
 
+import asyncio
 from fastapi.testclient import TestClient
+import pytest
 
+from backend.db import get_db
+from backend.idempotent_node_action import OutcomeUnknownError, run_node_action_idempotent
 from backend.security import sign_payload
 from ucc_contracts import validate_document
 
@@ -44,6 +48,11 @@ def test_identical_replay_returns_200_without_rerunning(app, app_settings):
     ledger_file = next(app_settings.ledger_root.glob("*.jsonl"))
     ledger_lines = [l for l in ledger_file.read_text(encoding="utf-8").splitlines() if l]
     assert len(ledger_lines) == 1
+    event_lines = [
+        line for line in (app_settings.ucc_events_root / "ucc.jsonl")
+        .read_text(encoding="utf-8").splitlines() if line
+    ]
+    assert len(event_lines) == 1
 
 
 def test_same_key_different_action_is_a_conflict(app, app_settings):
@@ -84,3 +93,31 @@ def test_stored_result_is_a_validated_ucc_result(app, app_settings):
     assert row is not None
     stored_value = json.loads(row[0])
     validate_document("result", stored_value["result"])
+
+
+def test_ambiguous_dispatch_is_not_reexecuted(app, monkeypatch):
+    calls = 0
+
+    async def ambiguous_dispatch(*, node_name, action):
+        nonlocal calls
+        calls += 1
+        raise RuntimeError("connection dropped after dispatch")
+
+    monkeypatch.setattr(
+        "backend.idempotent_node_action.run_factory_script", ambiguous_dispatch,
+    )
+    with get_db() as conn:
+        with pytest.raises(RuntimeError):
+            asyncio.run(run_node_action_idempotent(
+                conn, node_name="w-01", action="destroy",
+                idempotency_key="ambiguous-k", actor_username="admin",
+            ))
+        with pytest.raises(OutcomeUnknownError) as exc_info:
+            asyncio.run(run_node_action_idempotent(
+                conn, node_name="w-01", action="destroy",
+                idempotency_key="ambiguous-k", actor_username="admin",
+            ))
+
+    assert calls == 1
+    assert exc_info.value.problem["code"] == "outcome_unknown"
+    validate_document("problem", exc_info.value.problem)

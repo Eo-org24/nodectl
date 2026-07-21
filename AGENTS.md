@@ -126,9 +126,10 @@ table (D1–D6) or its conflict-resolution table.
   HTTP 200 without re-running the action or re-logging the ledger/event (a replay is a cache hit, not
   a second execution); same key + different node/action refuses HTTP 409. Store: `idempotency_records`
   table (migration `003_idempotency_records.sql`) in the existing `nodepanel.db` (filename unchanged by
-  D5 — out of that decision's four-item scope, see below), not a second SQLite file. Only a definite
-  success (`exit_code == 0`) is stored — a failed action is cheap to re-attempt and is not
-  idempotency-tracked. Omitting the header keeps the pre-M-b behavior exactly.
+  D5 — out of that decision's four-item scope, see below), not a second SQLite file. It commits
+  `unknown` before dispatch; success replaces that row, definite failure removes it, and ambiguity
+  retains it so retry refuses `outcome_unknown` until reconciliation. No auto-expiry. Omitting the
+  header keeps the pre-M-b behavior exactly.
 - **`nodepanel`→`ucc` rename (D5, done):** writer switched immediately — `Ledger(tool=...)` in
   `backend/app.py` now tags `"nodectl"`; `VALID_TOOL` in `backend/ledger.py` dual-accepts `"nodepanel"`
   for the transition window (readers never enforced `VALID_TOOL` to begin with, so this is a
@@ -146,8 +147,9 @@ table (D1–D6) or its conflict-resolution table.
   concern). `backend/diagnostics.py` + `backend/cli.py`: `config show --effective --redacted` (secrets
   always redacted, no un-redacted mode) and `module-health` (a real `ucc.module-registration` record,
   `health` computed by running the same startup check `lifespan()` runs). `COMPONENT-MAP.md`
-  classifies every component; flags (does not delete) two apparently-dead items
-  (`gpt-ascii.html`, `library/`).
+  classifies every component. The deterministic remediation rule found no filename match between
+  the factory action allowlist and `library/scripts/`, so `gpt-ascii.html`, `library/manifest.json`,
+  and `library/scripts/` were removed before the fork.
 - **Tests:** `pytest`; suites under `tests/unit`, `tests/integration`, `tests/contracts`.
 - **M-c hygiene done:** nested `nodectl/nodectl/` duplicate removed (confirmed dead first); `uploads/`
   untracked (content stays on disk).
