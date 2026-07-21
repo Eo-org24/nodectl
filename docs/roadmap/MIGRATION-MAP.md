@@ -142,6 +142,13 @@ present under the audit's rule.
 
 `terminal.py` stays fenced throughout. The frontend decision stays open throughout.
 
+### Deferred to a future contract release (v0.3.0)
+
+- Promote the `IN_FLIGHT` idempotency state into the shared `evaluate_idempotency` helper.
+  Stage 1 implemented it correctly at each owner's store boundary (application code) to
+  avoid a local edit of the pinned, immutable v0.2.0 vendored helper (re-audit DC-001).
+  When v0.3.0 ships, move it into the helper and re-vendor.
+
 ---
 
 ## 4. Maintenance
