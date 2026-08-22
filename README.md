@@ -2,6 +2,25 @@
 
 NodePanel is a FastAPI control plane for a homelab VM factory. The backend owns all control logic; the browser is a thin authenticated client for SSH-backed status, file transfer, Git deploy-key setup, and terminal access.
 
+## UCC integration lineage
+
+This is the UCC Stage 2 integration line, cut from
+`Eowerd24/nodectl@nodectl-phase0-conformant-standalone-v2`
+(`09783571754cfb21818115707fb99be833e34919`). The upstream `Eowerd24/nodectl` line is the
+frozen standalone baseline and receives no Stage 2 commits.
+
+Pinned peers:
+
+- `Eowerd24/Artifact-compiler@phase0-conformant-v2`
+  (`ad3753980b4510d755435571b28fb11bb434ab9a`)
+- `Eowerd24/VM-Factory@phase0-conformant-v2`
+  (`4f8f577364fb2b2b3a17e780fa7cc7a601058d0d`)
+- shared contracts: `Eowerd24/ucc-contracts@v0.2.0`
+
+UCC work and pull requests target `Eo-org24/nodectl:ucc-integration`. The preserved
+`ucc-integration-premature-stage2` branch was based on void pre-reconciliation tags and is
+audit evidence only; do not merge or cherry-pick it.
+
 ## Architecture
 
 - `backend.main:app` is the Uvicorn entrypoint.

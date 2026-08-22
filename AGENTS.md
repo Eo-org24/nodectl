@@ -6,6 +6,10 @@ This copy is trimmed to nodectl's own block — see the shared `/UCC/AGENTS.md` 
 (one directory up from the three repo clones) for the other two repos' blocks and for
 what to re-sync here if the shared core changes.
 
+> **UCC-line note:** This is the UCC integration line, not the standalone tool — see
+> `STAGE-2-UCC-ROADMAP.md` §0. It was cut from the verified standalone v2 tag and must
+> remain independently runnable throughout Stage 2.
+
 > **M-c note (this file superseded the repo's old operating-manual `AGENTS.md`):** the
 > previous version of this file was a pre-UCC, single-purpose "build the htmx frontend"
 > manual (naming the repo `nodepanel`, pointing at `backend/main.py` for routes, claiming
@@ -18,10 +22,15 @@ what to re-sync here if the shared core changes.
 
 ## 0. What this repo is
 
-A **UCC Stage-1 conformant standalone tool.** It runs and is tested on its own, and it
-conforms to a shared contract layer so three repos can later integrate. The fork onto the
-UCC line has **not** been cut yet. Pinned shared-contract version: **`ucc-contracts v0.2.0`**
-(vendored under `third_party/ucc-contracts/`).
+The **UCC Stage 2 integration line**, cut from
+`Eowerd24/nodectl@nodectl-phase0-conformant-standalone-v2`
+(`09783571754cfb21818115707fb99be833e34919`). It remains independently runnable while
+integrating the three modules through their shared contract layer. Pinned peer baselines are
+`Eowerd24/Artifact-compiler@phase0-conformant-v2`
+(`ad3753980b4510d755435571b28fb11bb434ab9a`) and
+`Eowerd24/VM-Factory@phase0-conformant-v2`
+(`4f8f577364fb2b2b3a17e780fa7cc7a601058d0d`). Pinned shared-contract version:
+**`ucc-contracts v0.2.0`** (vendored under `third_party/ucc-contracts/`).
 
 Two documents outrank this file and each other in this order — read them before non-trivial work:
 
@@ -34,11 +43,14 @@ table (D1–D6) or its conflict-resolution table.
 
 ---
 
-## 1. Shared core — non-negotiable rules (identical in all three repos)
+## 1. UCC-line core — non-negotiable rules
 
-1. **Fork scope is NARROW.** Do **not**: build the UCC product, merge repos, add a broker /
-   network service / canonical database, or wire real cross-module adapters. Those are Stage 2
-   (post-fork). Port adapters here may stay honest stubs.
+1. **Stage 2 scope is bounded and now authorized.** Implement the roadmap's in-process seam:
+   real `ArtifactPort`/`FactoryPort` adapters over pinned peers, minimal canonical record stores,
+   a disposable projection builder, the UCC application-service skeleton, one fixture-backed
+   operator view, XDG resolution, the v0.3.0 contract/schema work, and rootless Podman delivery.
+   Do **not** add a broker, message bus, socket/HTTP module API, canonical server database, repo
+   merge, multi-operator auth, full failure matrix, real-VM proof, or trusted-path terminal.
 2. **Fail closed over fabricate.** If you lack a real ID, hash, token, publication state, or
    record, refuse with a typed `ucc.problem` — never invent one. This is the same principle
    behind the vault and dry-run fixes; apply it everywhere, especially in port methods.
@@ -153,15 +165,18 @@ table (D1–D6) or its conflict-resolution table.
 - **Tests:** `pytest`; suites under `tests/unit`, `tests/integration`, `tests/contracts`.
 - **M-c hygiene done:** nested `nodectl/nodectl/` duplicate removed (confirmed dead first); `uploads/`
   untracked (content stays on disk).
-- **Pending:** none — M-c is complete for this repo as of this change. Next is the fork gate (§6 of
-  the roadmap), gated on all three repos' G1–G4 and the full §5 conformance suite.
+- **Pending:** the dependency-ordered Stage 2 sequence in `STAGE-2-UCC-ROADMAP.md`; the fork gate
+  and all Stage-1 conformance suites are complete.
 
 ---
 
-## 4. Out of scope (do not do here)
+## 4. Out of scope on the UCC line
 
-Real cross-module adapters; canonical record stores; the ~26 domain schemas; projection builder;
-UCC application services; broker / network API / server DB; repo merges; multi-operator auth; any
-general remote terminal in a trusted path; frontend or deployment-topology decisions beyond the
-already-approved Vue redesign in progress under `frontend/`. All of these are Stage 2 or a later
-roadmap. If a task seems to require one, stop and flag it against the roadmap.
+Stage 2 explicitly includes real **in-process** adapters, minimal canonical record stores, the
+domain schemas, a disposable projection builder, the UCC application-service skeleton, one
+fixture-backed operator view, XDG resolution, and rootless Podman delivery. It does **not** include
+a broker, message bus, socket/HTTP module API, canonical server database, repo merge,
+multi-operator auth, the full mandatory failure matrix, or a real disposable-VM run. A general
+remote terminal remains permanently fenced from every trusted/automated path. Frontend choices
+beyond the roadmap's single fixture-backed view remain open. If work falls outside Stage 2's
+explicit boundary, stop and record the proposed expansion before implementing it.
