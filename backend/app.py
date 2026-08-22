@@ -8,11 +8,13 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Resp
 from fastapi.staticfiles import StaticFiles
 
 from .auth import issue_session
+from .catalog import CommandCatalog
 from .config import settings
 from .db import init_db
 from .ledger import Ledger
 from .ports.artifact_port_stub import build_artifact_port
 from .ports.factory_port_stub import build_factory_port
+from .projection import init_projection_db
 from .routers import api, health, terminal, ui
 from .services.factory import FactoryService
 from .services.git_credentials import GitCredentialService
@@ -29,6 +31,7 @@ async def lifespan(app: FastAPI):
         settings.ensure_directories()
         settings.validate_runtime()
         init_db()
+        init_projection_db()
         app.state.health_ready = True
         yield
     except Exception as exc:
@@ -48,6 +51,7 @@ def create_app() -> FastAPI:
     app.state.transfer_service = TransferService(app.state.ssh_service, settings)
     app.state.git_credential_service = GitCredentialService(app.state.ssh_service, settings)
     app.state.ledger = Ledger(root=str(settings.ledger_root.parent), tool="nodectl")
+    app.state.command_catalog = CommandCatalog()
     # G3 port stubs (roadmap §4A): consumed here so the seam is real; every
     # method refuses until Stage 2/G5 wires a real in-process adapter.
     app.state.artifact_port = build_artifact_port()
