@@ -193,7 +193,7 @@ async def tab_config(request: Request, user=Depends(require_user)):
 
 def operations_context(request: Request) -> dict[str, object]:
     from ..catalog import CommandCatalog
-    from ..projection import get_projection_db, init_projection_db
+    from ..projection import get_correlated_operation, get_projection_db, init_projection_db
     init_projection_db()
     catalog = getattr(request.app.state, "command_catalog", CommandCatalog())
 
@@ -203,6 +203,8 @@ def operations_context(request: Request) -> dict[str, object]:
         executions = [dict(r) for r in conn.execute("SELECT * FROM projected_executions ORDER BY started_at DESC LIMIT 50").fetchall()]
         quarantines = [dict(r) for r in conn.execute("SELECT * FROM projected_quarantines ORDER BY quarantined_at DESC LIMIT 50").fetchall()]
 
+    correlated = get_correlated_operation()
+
     context = template_context(request, active_tab="operations", read_only=True)
     context.update({
         "projected_nodes": nodes,
@@ -210,6 +212,7 @@ def operations_context(request: Request) -> dict[str, object]:
         "projected_executions": executions,
         "projected_quarantines": quarantines,
         "catalog_commands": catalog.list_commands(),
+        "correlated_operation": correlated,
     })
     return context
 

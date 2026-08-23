@@ -7,6 +7,8 @@ from pathlib import Path
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from .xdg import XDGPathResolver
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
@@ -100,6 +102,22 @@ class Settings(BaseSettings):
                     raise RuntimeError(f"SSH key path is not a file: {key_path}")
         self._assert_writable(self.database_path.parent, "database directory")
         self._assert_writable(self.ssh_known_hosts_path.parent, "known_hosts directory")
+
+    @property
+    def xdg(self) -> XDGPathResolver:
+        return XDGPathResolver(app_name="ucc")
+
+    def resolve_xdg_path(self, category: str) -> Path:
+        resolver = self.xdg
+        if category == "config":
+            return resolver.config_dir
+        elif category == "data":
+            return resolver.data_dir
+        elif category == "state":
+            return resolver.state_dir
+        elif category == "runtime":
+            return resolver.runtime_dir
+        return self.data_root
 
     @staticmethod
     def _assert_writable(path: Path, label: str) -> None:

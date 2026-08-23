@@ -28,11 +28,11 @@ services:
     cap_drop:
       - ALL
     volumes:
-      - ./data:/app/data
-      - ./staging:/app/staging
-      - ./inbox:/app/inbox
-      - ./ledger:/app/ledger
-      - ./events:/app/events
+      - ./data:/app/data:Z
+      - ./staging:/app/staging:Z
+      - ./inbox:/app/inbox:Z
+      - ./ledger:/app/ledger:Z
+      - ./events:/app/events:Z
     secrets:
       - factory_ssh_key
       - vm_ssh_key

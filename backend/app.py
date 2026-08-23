@@ -12,9 +12,8 @@ from .catalog import CommandCatalog
 from .config import settings
 from .db import init_db
 from .ledger import Ledger
-from .ports.artifact_port_stub import build_artifact_port
-from .ports.factory_port_stub import build_factory_port
-from .projection import init_projection_db
+from .ports import build_artifact_port, build_factory_port
+from .projection import build_projection, init_projection_db
 from .routers import api, health, terminal, ui
 from .services.factory import FactoryService
 from .services.git_credentials import GitCredentialService
@@ -32,6 +31,12 @@ async def lifespan(app: FastAPI):
         settings.validate_runtime()
         init_db()
         init_projection_db()
+        streams = [
+            settings.ucc_events_root / "ucc.jsonl",
+            settings.data_root.parent / "artifact-compiler" / "events" / "artifact-compiler.jsonl",
+            settings.data_root.parent / "vm-factory" / "events" / "vm-factory.jsonl",
+        ]
+        build_projection(streams)
         app.state.health_ready = True
         yield
     except Exception as exc:

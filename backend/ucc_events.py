@@ -34,18 +34,6 @@ def ucc_now_iso() -> str:
     return now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{now.microsecond // 1000:03d}Z"
 
 
-def deterministic_id(prefix: str, seed: str) -> str:
-    if prefix not in ID_PREFIXES:
-        raise ValueError(f"Unknown id prefix {prefix!r}.")
-    digest = hashlib.sha256(seed.encode("utf-8")).digest()
-    value = int.from_bytes(digest[:16], "big")
-    chars = []
-    for _ in range(26):
-        chars.append(_CROCKFORD[value & 0x1F])
-        value >>= 5
-    return f"{prefix}_{''.join(reversed(chars))}"
-
-
 def _next_producer_sequence(events_path: Path) -> int:
     if not events_path.exists():
         return 0
@@ -62,8 +50,8 @@ def build_event(*, event_type: str, subject_kind: str, subject_name: str,
     operation_id = new_id("op")
     instance_id = new_id("act")
     now = ucc_now_iso()
-    resolved_actor_id = actor_id or (deterministic_id("act", f"actor:{actor_username}") if actor_username else new_id("act"))
-    resolved_subject_id = subject_id or (deterministic_id("node", f"{subject_kind}:{subject_name}") if subject_name else new_id("node"))
+    resolved_actor_id = actor_id or new_id("act")
+    resolved_subject_id = subject_id or new_id("node")
     event = {
         "schema": "ucc.event",
         "schema_version": 1,

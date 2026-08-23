@@ -15,12 +15,12 @@ def test_command_catalog_lookup():
     catalog = CommandCatalog()
     reset_cmd = catalog.get_command("node.reset")
     assert reset_cmd is not None
-    assert reset_cmd["implementation_kind"] == "ucc_builtin"
-    assert reset_cmd["entrypoint"] == "builtin/node_reset.py"
+    assert reset_cmd["implementation_kind"] == "vm_factory_operation"
+    assert reset_cmd["entrypoint"] == "reset_node"
 
     art_cmd = catalog.get_command("artifact.execute")
     assert art_cmd is not None
     assert art_cmd["implementation_kind"] == "published_artifact_revision"
 
     factory_cmds = catalog.list_by_kind("vm_factory_operation")
-    assert len(factory_cmds) >= 3
+    assert len(factory_cmds) >= 4

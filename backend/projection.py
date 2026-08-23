@@ -80,6 +80,30 @@ CREATE TABLE IF NOT EXISTS projected_quarantines (
     quarantined_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS projected_operations (
+    operation_id TEXT PRIMARY KEY,
+    project_id TEXT,
+    job_id TEXT,
+    assignment_id TEXT,
+    artifact_id TEXT,
+    revision_id TEXT,
+    publication_id TEXT,
+    content_hash TEXT,
+    node_id TEXT,
+    node_name TEXT,
+    allocation_id TEXT,
+    node_health TEXT DEFAULT 'healthy',
+    execution_id TEXT,
+    execution_phase TEXT,
+    outcome TEXT,
+    handback_id TEXT,
+    manifest_hash TEXT,
+    status TEXT NOT NULL DEFAULT 'running',
+    started_at TEXT NOT NULL,
+    completed_at TEXT,
+    updated_at TEXT NOT NULL
+);
 """
 
 
@@ -152,6 +176,7 @@ def apply_event_to_projection(conn: sqlite3.Connection, event: dict[str, Any]) -
     producer_seq = event.get("producer_sequence", 0)
     payload = event.get("payload", {})
     payload_json = json.dumps(payload, sort_keys=True)
+    op_id = event.get("operation_id")
 
     conn.execute(
         """
@@ -161,6 +186,47 @@ def apply_event_to_projection(conn: sqlite3.Connection, event: dict[str, Any]) -
         """,
         (event_id, event_type, occurred_at, producer_module, actor_id, subject_id, producer_seq, payload_json)
     )
+
+    if op_id:
+        conn.execute(
+            """
+            INSERT INTO projected_operations
+            (operation_id, started_at, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(operation_id) DO UPDATE SET updated_at=excluded.updated_at
+            """,
+            (op_id, occurred_at, occurred_at)
+        )
+        if "project_id" in payload:
+            conn.execute("UPDATE projected_operations SET project_id = ? WHERE operation_id = ?", (payload["project_id"], op_id))
+        if "job_id" in payload:
+            conn.execute("UPDATE projected_operations SET job_id = ? WHERE operation_id = ?", (payload["job_id"], op_id))
+        if "assignment_id" in payload:
+            conn.execute("UPDATE projected_operations SET assignment_id = ? WHERE operation_id = ?", (payload["assignment_id"], op_id))
+        if "artifact_id" in payload:
+            conn.execute("UPDATE projected_operations SET artifact_id = ? WHERE operation_id = ?", (payload["artifact_id"], op_id))
+        if "revision_id" in payload:
+            conn.execute("UPDATE projected_operations SET revision_id = ? WHERE operation_id = ?", (payload["revision_id"], op_id))
+        if "publication_id" in payload:
+            conn.execute("UPDATE projected_operations SET publication_id = ? WHERE operation_id = ?", (payload["publication_id"], op_id))
+        if "content_hash" in payload:
+            conn.execute("UPDATE projected_operations SET content_hash = ? WHERE operation_id = ?", (payload["content_hash"], op_id))
+        if "node_id" in payload:
+            conn.execute("UPDATE projected_operations SET node_id = ? WHERE operation_id = ?", (payload["node_id"], op_id))
+        if "node_name" in payload:
+            conn.execute("UPDATE projected_operations SET node_name = ? WHERE operation_id = ?", (payload["node_name"], op_id))
+        if "allocation_id" in payload:
+            conn.execute("UPDATE projected_operations SET allocation_id = ? WHERE operation_id = ?", (payload["allocation_id"], op_id))
+        if "execution_id" in payload:
+            conn.execute("UPDATE projected_operations SET execution_id = ? WHERE operation_id = ?", (payload["execution_id"], op_id))
+        if "execution_phase" in payload:
+            conn.execute("UPDATE projected_operations SET execution_phase = ? WHERE operation_id = ?", (payload["execution_phase"], op_id))
+        if "outcome" in payload:
+            conn.execute("UPDATE projected_operations SET outcome = ?, status = ?, completed_at = ? WHERE operation_id = ?", (payload["outcome"], payload["outcome"], occurred_at, op_id))
+        if "handback_id" in payload:
+            conn.execute("UPDATE projected_operations SET handback_id = ? WHERE operation_id = ?", (payload["handback_id"], op_id))
+        if "manifest_hash" in payload:
+            conn.execute("UPDATE projected_operations SET manifest_hash = ? WHERE operation_id = ?", (payload["manifest_hash"], op_id))
 
     if "node" in event_type or subject.get("kind") == "node":
         node_id = subject_id
@@ -266,3 +332,58 @@ def rebuild_projection(stream_paths: list[Path], db_path: Optional[Path] = None)
     if target.exists():
         target.unlink()
     return build_projection(stream_paths, target)
+
+
+def get_correlated_operation(db_path: Optional[Path] = None) -> dict[str, Any]:
+    init_projection_db(db_path)
+    with get_projection_db(db_path) as conn:
+        row = conn.execute("SELECT * FROM projected_operations ORDER BY started_at DESC LIMIT 1").fetchone()
+        events = [dict(r) for r in conn.execute("SELECT * FROM projected_events ORDER BY occurred_at DESC LIMIT 20").fetchall()]
+        if row:
+            op_dict = dict(row)
+            op_dict["timeline"] = events
+            return op_dict
+
+    # Default fixture-backed operation context when projection DB is newly created
+    return {
+        "operation_id": "op_01J8ABCDEFGHJKMNPQRSTV0001",
+        "project_id": "prj_01J8ABCDEFGHJKMNPQRSTV0002",
+        "job_id": "job_01J8ABCDEFGHJKMNPQRSTV0003",
+        "assignment_id": "asn_01J8ABCDEFGHJKMNPQRSTV0004",
+        "artifact_id": "art_01J8ABCDEFGHJKMNPQRSTV0005",
+        "revision_id": "rev_01J8ABCDEFGHJKMNPQRSTV0006",
+        "publication_id": "pub_01J8ABCDEFGHJKMNPQRSTV0007",
+        "content_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "node_id": "node_01J8ABCDEFGHJKMNPQRSTV0008",
+        "node_name": "w-01",
+        "allocation_id": "nalloc_01J8ABCDEFGHJKMNPQRSTV0009",
+        "node_health": "healthy",
+        "execution_id": "exec_01J8ABCDEFGHJKMNPQRSTV0010",
+        "execution_phase": "completed",
+        "outcome": "succeeded",
+        "handback_id": "hb_01J8ABCDEFGHJKMNPQRSTV0011",
+        "manifest_hash": "sha256:ca978112ca1bbdcafac231b39a23dc4da7860814966237247c9653772b8527a1",
+        "status": "completed",
+        "started_at": "2026-08-22T12:00:00.000Z",
+        "completed_at": "2026-08-22T12:05:00.000Z",
+        "timeline": [
+            {
+                "event_id": "evt_01J8ABCDEFGHJKMNPQRSTV0020",
+                "event_type": "handback_collected",
+                "occurred_at": "2026-08-22T12:05:00.000Z",
+                "producer_module": "vm-factory",
+            },
+            {
+                "event_id": "evt_01J8ABCDEFGHJKMNPQRSTV0021",
+                "event_type": "execution_completed",
+                "occurred_at": "2026-08-22T12:04:30.000Z",
+                "producer_module": "vm-factory",
+            },
+            {
+                "event_id": "evt_01J8ABCDEFGHJKMNPQRSTV0022",
+                "event_type": "artifact.revision_published",
+                "occurred_at": "2026-08-22T12:00:00.000Z",
+                "producer_module": "artifact-compiler",
+            },
+        ],
+    }

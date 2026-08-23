@@ -1,4 +1,82 @@
 <div class="space-y-6">
+    <!-- Correlated Operation Detail (Operator Finish Line) -->
+    <div class="terminal-card p-6 border border-[#00ffcc]">
+        <div class="flex justify-between items-center mb-6 border-b border-[#00ffcc] pb-3">
+            <div>
+                <h2 class="text-lg font-bold tracking-wider text-[#00ffcc] uppercase">Correlated Operation</h2>
+                <p class="text-[10px] text-[#00ffcc] font-mono mt-0.5 uppercase tracking-wide">End-to-end provenance and execution verification</p>
+            </div>
+            <div class="text-xs font-mono px-2 py-1 rounded bg-[#0a1a1a] text-[#00ffcc] border border-[#00ffcc]">
+                Status: {{ correlated_operation.status|default("completed")|upper }}
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 font-mono text-xs mb-6">
+            <!-- Provenance / Hierarchy -->
+            <div class="bg-[#050010] p-3 rounded border border-[#3d0066]">
+                <div class="text-[10px] uppercase text-[#9d00ff] font-bold mb-2">Scope & Hierarchy</div>
+                <div class="space-y-1">
+                    <div><span class="text-gray-400">Project:</span> <span class="text-[#00ffcc] font-bold">{{ correlated_operation.project_id }}</span></div>
+                    <div><span class="text-gray-400">Job:</span> <span class="text-[#00ffcc]">{{ correlated_operation.job_id }}</span></div>
+                    <div><span class="text-gray-400">Assignment:</span> <span class="text-[#00ffcc]">{{ correlated_operation.assignment_id }}</span></div>
+                    <div><span class="text-gray-400">Operation:</span> <span class="text-[#ffff00]">{{ correlated_operation.operation_id }}</span></div>
+                </div>
+            </div>
+
+            <!-- Artifact & Publication -->
+            <div class="bg-[#050010] p-3 rounded border border-[#3d0066]">
+                <div class="text-[10px] uppercase text-[#9d00ff] font-bold mb-2">Artifact & Publication</div>
+                <div class="space-y-1">
+                    <div><span class="text-gray-400">Artifact:</span> <span class="text-[#ff00ff]">{{ correlated_operation.artifact_id }}</span></div>
+                    <div><span class="text-gray-400">Revision:</span> <span class="text-[#ff00ff]">{{ correlated_operation.revision_id }}</span></div>
+                    <div><span class="text-gray-400">Publication:</span> <span class="text-[#ff00ff]">{{ correlated_operation.publication_id }}</span></div>
+                    <div class="truncate" title="{{ correlated_operation.content_hash }}"><span class="text-gray-400">Hash:</span> <span class="text-gray-300 text-[10px]">{{ correlated_operation.content_hash }}</span></div>
+                </div>
+            </div>
+
+            <!-- Target Node & Allocation -->
+            <div class="bg-[#050010] p-3 rounded border border-[#3d0066]">
+                <div class="text-[10px] uppercase text-[#9d00ff] font-bold mb-2">Target Node & Health</div>
+                <div class="space-y-1">
+                    <div><span class="text-gray-400">Node:</span> <span class="text-[#00ffcc] font-bold">{{ correlated_operation.node_name }} ({{ correlated_operation.node_id }})</span></div>
+                    <div><span class="text-gray-400">Allocation:</span> <span class="text-[#00ffcc]">{{ correlated_operation.allocation_id }}</span></div>
+                    <div><span class="text-gray-400">Health:</span> <span class="px-1.5 py-0.5 rounded text-[10px] bg-green-900 text-green-200">{{ correlated_operation.node_health }}</span></div>
+                </div>
+            </div>
+
+            <!-- Execution & Handback -->
+            <div class="bg-[#050010] p-3 rounded border border-[#3d0066]">
+                <div class="text-[10px] uppercase text-[#9d00ff] font-bold mb-2">Execution & Handback</div>
+                <div class="space-y-1">
+                    <div><span class="text-gray-400">Execution:</span> <span class="text-[#ffff00]">{{ correlated_operation.execution_id }}</span></div>
+                    <div><span class="text-gray-400">Phase/Outcome:</span> <span class="text-green-400 font-bold">{{ correlated_operation.execution_phase }} / {{ correlated_operation.outcome }}</span></div>
+                    <div><span class="text-gray-400">Handback:</span> <span class="text-[#00ffcc]">{{ correlated_operation.handback_id }}</span></div>
+                    <div class="truncate" title="{{ correlated_operation.manifest_hash }}"><span class="text-gray-400">Manifest:</span> <span class="text-gray-300 text-[10px]">{{ correlated_operation.manifest_hash }}</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Correlated Event Timeline -->
+        <div class="bg-[#050010] p-4 rounded border border-[#3d0066]">
+            <h3 class="text-xs font-bold text-[#00ffcc] uppercase tracking-wider mb-3">Correlated Event Timeline</h3>
+            <div class="space-y-2 font-mono text-xs max-h-48 overflow-y-auto">
+                {% for evt in correlated_operation.timeline %}
+                <div class="flex items-center justify-between border-b border-[#2d004d] pb-1">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-[#9d00ff] text-[10px]">{{ evt.occurred_at }}</span>
+                        <span class="px-1.5 py-0.2 text-[10px] bg-[#1d0033] text-[#ff00ff] rounded">{{ evt.producer_module }}</span>
+                        <span class="text-white font-bold">{{ evt.event_type }}</span>
+                    </div>
+                    <span class="text-[#00ffcc] text-[10px]">{{ evt.event_id }}</span>
+                </div>
+                {% else %}
+                <div class="text-gray-500 italic">No timeline events recorded.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Projection Overview Grid -->
     <div class="terminal-card p-6">
         <div class="flex justify-between items-center mb-6 border-b border-[#9d00ff] pb-3">
             <div>

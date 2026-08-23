@@ -2,10 +2,12 @@ FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
+    PYTHONPATH="/app:/app/third_party/ucc-contracts" \
     DATA_ROOT=/app/data \
     STAGING_ROOT=/app/staging \
     INBOX_ROOT=/app/inbox \
     LEDGER_ROOT=/app/ledger \
+    UCC_EVENTS_ROOT=/app/events \
     DATABASE_PATH=/app/data/nodepanel.db \
     SSH_KNOWN_HOSTS_PATH=/app/data/known_hosts \
     BIND_HOST=0.0.0.0 \
@@ -19,13 +21,13 @@ RUN apt-get update \
     && groupadd --system nodepanel \
     && useradd --system --gid nodepanel --create-home --home-dir /home/nodepanel nodepanel
 
+COPY third_party ./third_party
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend ./backend
 COPY templates ./templates
 COPY static ./static
-COPY third_party ./third_party
 COPY frontend/dist ./frontend/dist
 COPY README.md ./
 COPY docs ./docs

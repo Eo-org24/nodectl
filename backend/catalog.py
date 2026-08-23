@@ -21,8 +21,8 @@ CATALOG_DEFINITIONS: list[dict[str, Any]] = [
         "created_by": "act_01M0NW6TX9RXWAFGQ71WS63000",
         "record_version": 1,
         "name": "node.reset",
-        "implementation_kind": "ucc_builtin",
-        "entrypoint": "builtin/node_reset.py",
+        "implementation_kind": "vm_factory_operation",
+        "entrypoint": "reset_node",
         "parameters_schema": {
             "type": "object",
             "required": ["name"],
@@ -37,8 +37,8 @@ CATALOG_DEFINITIONS: list[dict[str, Any]] = [
         "created_by": "act_01M0NW6TX9RXWAFGQ71WS63000",
         "record_version": 1,
         "name": "node.quarantine",
-        "implementation_kind": "ucc_builtin",
-        "entrypoint": "builtin/node_quarantine.py",
+        "implementation_kind": "vm_factory_operation",
+        "entrypoint": "quarantine_node",
         "parameters_schema": {
             "type": "object",
             "required": ["name"],
@@ -53,8 +53,8 @@ CATALOG_DEFINITIONS: list[dict[str, Any]] = [
         "created_by": "act_01M0NW6TX9RXWAFGQ71WS63000",
         "record_version": 1,
         "name": "node.health",
-        "implementation_kind": "ucc_builtin",
-        "entrypoint": "builtin/node_health.py",
+        "implementation_kind": "vm_factory_operation",
+        "entrypoint": "get_node_health",
         "parameters_schema": {
             "type": "object",
             "required": ["name"],
