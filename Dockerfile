@@ -1,3 +1,13 @@
+FROM node:20-slim AS frontend-build
+
+WORKDIR /app/frontend
+
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+
+COPY frontend/ ./
+RUN npm run build
+
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -11,7 +21,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     DATABASE_PATH=/app/data/nodepanel.db \
     SSH_KNOWN_HOSTS_PATH=/app/data/known_hosts \
     BIND_HOST=0.0.0.0 \
-    BIND_PORT=420
+    BIND_PORT=8420
 
 WORKDIR /app
 
@@ -28,7 +38,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend ./backend
 COPY templates ./templates
 COPY static ./static
-COPY frontend/dist ./frontend/dist
+COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 COPY README.md ./
 COPY docs ./docs
 COPY pytest.ini ./
@@ -38,9 +48,9 @@ RUN mkdir -p /app/data /app/staging /app/inbox /app/ledger /app/events \
 
 USER nodepanel
 
-EXPOSE 420
+EXPOSE 8420
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ.get('BIND_PORT', '420') + '/healthz', timeout=3).read()" || exit 1
+    CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ.get('BIND_PORT', '8420') + '/healthz', timeout=3).read()" || exit 1
 
 CMD ["sh", "-c", "exec uvicorn backend.main:app --host \"$BIND_HOST\" --port \"$BIND_PORT\""]

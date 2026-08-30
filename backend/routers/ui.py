@@ -220,4 +220,3 @@ def operations_context(request: Request) -> dict[str, object]:
 @router.get("/tab/operations", response_class=HTMLResponse)
 async def tab_operations(request: Request, user=Depends(require_user)):
     return templates.TemplateResponse(request, "operations_tab.html", operations_context(request))
-

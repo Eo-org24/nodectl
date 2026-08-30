@@ -82,7 +82,7 @@ def test_byte_stable_projection_rebuild_and_canonical_journal_survival(tmp_path)
             "VALUES (?, ?, ?, ?, ?, ?)",
             ("key-1", "sha256:abcd", "node.action", "completed", "{}", "2026-08-22T12:00:00Z"),
         )
-    
+
     # Verify canonical record exists
     with get_db(journal_db) as conn:
         row = conn.execute("SELECT * FROM idempotency_records WHERE idempotency_key = ?", ("key-1",)).fetchone()
@@ -117,7 +117,7 @@ def test_byte_stable_projection_rebuild_and_canonical_journal_survival(tmp_path)
             f.write(json.dumps(e) + "\n")
 
     proj_db = tmp_path / "projection.db"
-    
+
     # 1. First build
     build_projection([events_file], proj_db)
     with get_projection_db(proj_db) as conn:
