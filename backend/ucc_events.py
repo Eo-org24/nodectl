@@ -34,18 +34,6 @@ def ucc_now_iso() -> str:
     return now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{now.microsecond // 1000:03d}Z"
 
 
-def deterministic_id(prefix: str, seed: str) -> str:
-    if prefix not in ID_PREFIXES:
-        raise ValueError(f"Unknown id prefix {prefix!r}.")
-    digest = hashlib.sha256(seed.encode("utf-8")).digest()
-    value = int.from_bytes(digest[:16], "big")
-    chars = []
-    for _ in range(26):
-        chars.append(_CROCKFORD[value & 0x1F])
-        value >>= 5
-    return f"{prefix}_{''.join(reversed(chars))}"
-
-
 def _next_producer_sequence(events_path: Path) -> int:
     if not events_path.exists():
         return 0
@@ -54,11 +42,16 @@ def _next_producer_sequence(events_path: Path) -> int:
 
 
 def build_event(*, event_type: str, subject_kind: str, subject_name: str,
-                 actor_username: str, payload: dict[str, Any],
+                 actor_username: str = "operator",
+                 actor_id: str | None = None,
+                 subject_id: str | None = None,
+                 payload: dict[str, Any],
                  producer_sequence: int) -> dict[str, Any]:
     operation_id = new_id("op")
     instance_id = new_id("act")
     now = ucc_now_iso()
+    resolved_actor_id = actor_id or new_id("act")
+    resolved_subject_id = subject_id or new_id("node")
     event = {
         "schema": "ucc.event",
         "schema_version": 1,
@@ -67,8 +60,8 @@ def build_event(*, event_type: str, subject_kind: str, subject_name: str,
         "occurred_at": now,
         "recorded_at": now,
         "producer": {"module_id": MODULE_ID, "instance_id": instance_id},
-        "actor": {"kind": "human", "id": deterministic_id("act", f"actor:{actor_username}")},
-        "subject": {"kind": subject_kind, "id": deterministic_id("node", f"{subject_kind}:{subject_name}")},
+        "actor": {"kind": "human", "id": resolved_actor_id},
+        "subject": {"kind": subject_kind, "id": resolved_subject_id},
         "operation_id": operation_id,
         "request_id": new_id("req"),
         "correlation_id": new_id("corr"),
@@ -80,11 +73,14 @@ def build_event(*, event_type: str, subject_kind: str, subject_name: str,
 
 
 def emit_event(events_path: Path, *, event_type: str, subject_kind: str, subject_name: str,
-               actor_username: str, payload: dict[str, Any]) -> dict[str, Any]:
+               actor_username: str = "operator",
+               actor_id: str | None = None,
+               subject_id: str | None = None,
+               payload: dict[str, Any]) -> dict[str, Any]:
     sequence = _next_producer_sequence(events_path)
     event = build_event(event_type=event_type, subject_kind=subject_kind, subject_name=subject_name,
-                        actor_username=actor_username, payload=payload,
-                        producer_sequence=sequence)
+                        actor_username=actor_username, actor_id=actor_id, subject_id=subject_id,
+                        payload=payload, producer_sequence=sequence)
     events_path.parent.mkdir(parents=True, exist_ok=True)
     line = json.dumps(event, ensure_ascii=False, separators=(",", ":")) + "\n"
     data = line.encode("utf-8")

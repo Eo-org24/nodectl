@@ -4,8 +4,10 @@ import getpass
 import secrets
 from pathlib import Path
 
-from pydantic import Field, field_validator
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from .xdg import XDGPathResolver
 
 
 class Settings(BaseSettings):
@@ -21,7 +23,13 @@ class Settings(BaseSettings):
 
     bind_host: str = "127.0.0.1"
     bind_port: int = 8000
-    allowed_origins: list[str] = Field(default_factory=lambda: ["http://127.0.0.1:8000", "http://localhost:8000"])
+    # str, not list[str]: pydantic-settings 2.1.0 JSON-decodes complex-typed env
+    # values before any validator runs, so a comma-separated ALLOWED_ORIGINS
+    # would fail to parse as JSON. Split on read via the allowed_origins property.
+    allowed_origins_raw: str = Field(
+        default="http://127.0.0.1:8000,http://localhost:8000",
+        validation_alias="ALLOWED_ORIGINS",
+    )
 
     admin_username: str = Field(default_factory=getpass.getuser)
     admin_password: str = "change-me-now"
@@ -63,12 +71,13 @@ class Settings(BaseSettings):
 
     mock_ssh: bool = False
 
-    @field_validator("allowed_origins", mode="before")
-    @classmethod
-    def _split_origins(cls, value: object) -> object:
-        if isinstance(value, str):
-            return [item.strip() for item in value.split(",") if item.strip()]
-        return value
+    @property
+    def allowed_origins(self) -> list[str]:
+        return [item.strip() for item in self.allowed_origins_raw.split(",") if item.strip()]
+
+    @allowed_origins.setter
+    def allowed_origins(self, value: list[str]) -> None:
+        self.allowed_origins_raw = ",".join(value)
 
     def ensure_directories(self) -> None:
         for path in (self.data_root, self.staging_root, self.inbox_root, self.ledger_root, self.ucc_events_root):
@@ -100,6 +109,22 @@ class Settings(BaseSettings):
                     raise RuntimeError(f"SSH key path is not a file: {key_path}")
         self._assert_writable(self.database_path.parent, "database directory")
         self._assert_writable(self.ssh_known_hosts_path.parent, "known_hosts directory")
+
+    @property
+    def xdg(self) -> XDGPathResolver:
+        return XDGPathResolver(app_name="ucc")
+
+    def resolve_xdg_path(self, category: str) -> Path:
+        resolver = self.xdg
+        if category == "config":
+            return resolver.config_dir
+        elif category == "data":
+            return resolver.data_dir
+        elif category == "state":
+            return resolver.state_dir
+        elif category == "runtime":
+            return resolver.runtime_dir
+        return self.data_root
 
     @staticmethod
     def _assert_writable(path: Path, label: str) -> None:

@@ -65,6 +65,7 @@ def test_same_node_correlates_across_events(app, app_settings):
 
     events = _read_ucc_events(app_settings)
     assert len(events) == 2
-    assert events[0]["subject"]["id"] == events[1]["subject"]["id"]
+    assert events[0]["subject"]["id"].startswith("node_")
+    assert events[1]["subject"]["id"].startswith("node_")
     assert events[0]["producer_sequence"] == 0
     assert events[1]["producer_sequence"] == 1

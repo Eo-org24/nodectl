@@ -1,0 +1,184 @@
+<div class="space-y-6">
+    <!-- Correlated Operation Detail (Operator Finish Line) -->
+    <div class="terminal-card p-6 border border-[#00ffcc]">
+        <div class="flex justify-between items-center mb-6 border-b border-[#00ffcc] pb-3">
+            <div>
+                <h2 class="text-lg font-bold tracking-wider text-[#00ffcc] uppercase">Correlated Operation</h2>
+                <p class="text-[10px] text-[#00ffcc] font-mono mt-0.5 uppercase tracking-wide">End-to-end provenance and execution verification</p>
+            </div>
+            <div class="text-xs font-mono px-2 py-1 rounded bg-[#0a1a1a] text-[#00ffcc] border border-[#00ffcc]">
+                Status: {{ correlated_operation.status|default("completed")|upper }}
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 font-mono text-xs mb-6">
+            <!-- Provenance / Hierarchy -->
+            <div class="bg-[#050010] p-3 rounded border border-[#3d0066]">
+                <div class="text-[10px] uppercase text-[#9d00ff] font-bold mb-2">Scope & Hierarchy</div>
+                <div class="space-y-1">
+                    <div><span class="text-gray-400">Project:</span> <span class="text-[#00ffcc] font-bold">{{ correlated_operation.project_id }}</span></div>
+                    <div><span class="text-gray-400">Job:</span> <span class="text-[#00ffcc]">{{ correlated_operation.job_id }}</span></div>
+                    <div><span class="text-gray-400">Assignment:</span> <span class="text-[#00ffcc]">{{ correlated_operation.assignment_id }}</span></div>
+                    <div><span class="text-gray-400">Operation:</span> <span class="text-[#ffff00]">{{ correlated_operation.operation_id }}</span></div>
+                </div>
+            </div>
+
+            <!-- Artifact & Publication -->
+            <div class="bg-[#050010] p-3 rounded border border-[#3d0066]">
+                <div class="text-[10px] uppercase text-[#9d00ff] font-bold mb-2">Artifact & Publication</div>
+                <div class="space-y-1">
+                    <div><span class="text-gray-400">Artifact:</span> <span class="text-[#ff00ff]">{{ correlated_operation.artifact_id }}</span></div>
+                    <div><span class="text-gray-400">Revision:</span> <span class="text-[#ff00ff]">{{ correlated_operation.revision_id }}</span></div>
+                    <div><span class="text-gray-400">Publication:</span> <span class="text-[#ff00ff]">{{ correlated_operation.publication_id }}</span></div>
+                    <div class="truncate" title="{{ correlated_operation.content_hash }}"><span class="text-gray-400">Hash:</span> <span class="text-gray-300 text-[10px]">{{ correlated_operation.content_hash }}</span></div>
+                </div>
+            </div>
+
+            <!-- Target Node & Allocation -->
+            <div class="bg-[#050010] p-3 rounded border border-[#3d0066]">
+                <div class="text-[10px] uppercase text-[#9d00ff] font-bold mb-2">Target Node & Health</div>
+                <div class="space-y-1">
+                    <div><span class="text-gray-400">Node:</span> <span class="text-[#00ffcc] font-bold">{{ correlated_operation.node_name }} ({{ correlated_operation.node_id }})</span></div>
+                    <div><span class="text-gray-400">Allocation:</span> <span class="text-[#00ffcc]">{{ correlated_operation.allocation_id }}</span></div>
+                    <div><span class="text-gray-400">Health:</span> <span class="px-1.5 py-0.5 rounded text-[10px] bg-green-900 text-green-200">{{ correlated_operation.node_health }}</span></div>
+                </div>
+            </div>
+
+            <!-- Execution & Handback -->
+            <div class="bg-[#050010] p-3 rounded border border-[#3d0066]">
+                <div class="text-[10px] uppercase text-[#9d00ff] font-bold mb-2">Execution & Handback</div>
+                <div class="space-y-1">
+                    <div><span class="text-gray-400">Execution:</span> <span class="text-[#ffff00]">{{ correlated_operation.execution_id }}</span></div>
+                    <div><span class="text-gray-400">Phase/Outcome:</span> <span class="text-green-400 font-bold">{{ correlated_operation.execution_phase }} / {{ correlated_operation.outcome }}</span></div>
+                    <div><span class="text-gray-400">Handback:</span> <span class="text-[#00ffcc]">{{ correlated_operation.handback_id }}</span></div>
+                    <div class="truncate" title="{{ correlated_operation.manifest_hash }}"><span class="text-gray-400">Manifest:</span> <span class="text-gray-300 text-[10px]">{{ correlated_operation.manifest_hash }}</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Correlated Event Timeline -->
+        <div class="bg-[#050010] p-4 rounded border border-[#3d0066]">
+            <h3 class="text-xs font-bold text-[#00ffcc] uppercase tracking-wider mb-3">Correlated Event Timeline</h3>
+            <div class="space-y-2 font-mono text-xs max-h-48 overflow-y-auto">
+                {% for evt in correlated_operation.timeline %}
+                <div class="flex items-center justify-between border-b border-[#2d004d] pb-1">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-[#9d00ff] text-[10px]">{{ evt.occurred_at }}</span>
+                        <span class="px-1.5 py-0.2 text-[10px] bg-[#1d0033] text-[#ff00ff] rounded">{{ evt.producer_module }}</span>
+                        <span class="text-white font-bold">{{ evt.event_type }}</span>
+                    </div>
+                    <span class="text-[#00ffcc] text-[10px]">{{ evt.event_id }}</span>
+                </div>
+                {% else %}
+                <div class="text-gray-500 italic">No timeline events recorded.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Projection Overview Grid -->
+    <div class="terminal-card p-6">
+        <div class="flex justify-between items-center mb-6 border-b border-[#9d00ff] pb-3">
+            <div>
+                <h2 class="text-lg font-bold tracking-wider text-glow uppercase">UCC Operations (Projection-Backed)</h2>
+                <p class="text-[10px] text-[#9d00ff] font-mono mt-0.5 uppercase tracking-wide">Aggregated from event streams</p>
+            </div>
+            <div class="text-xs text-[#00ffcc] font-mono">Projection DB: Synchronized</div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <!-- Projected Nodes -->
+            <div class="bg-[#0a001a] border border-[#9d00ff] p-4 rounded">
+                <h3 class="text-sm font-bold text-[#ff00ff] uppercase tracking-wider mb-3 flex justify-between">
+                    <span>Projected Nodes</span>
+                    <span class="text-xs text-[#00ffcc] font-mono">{{ projected_nodes|length }} nodes</span>
+                </h3>
+                <div class="space-y-2 max-h-60 overflow-y-auto font-mono text-xs">
+                    {% for n in projected_nodes %}
+                    <div class="border border-[#3d0066] p-2 flex justify-between items-center">
+                        <div>
+                            <div class="text-[#ff00ff] font-bold">{{ n.display_name }} ({{ n.node_id }})</div>
+                            <div class="text-[#9d00ff]">State: {{ n.runtime_state }} | Readiness: {{ n.readiness }}</div>
+                        </div>
+                        <div class="text-right">
+                            <span class="px-2 py-0.5 text-[10px] uppercase rounded {% if n.quarantine_state == "quarantined" %}bg-red-900 text-red-200{% else %}bg-green-900 text-green-200{% endif %}">
+                                {{ n.quarantine_state }}
+                            </span>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-gray-500 italic p-2">No projected nodes found.</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Projected Artifacts -->
+            <div class="bg-[#0a001a] border border-[#9d00ff] p-4 rounded">
+                <h3 class="text-sm font-bold text-[#ff00ff] uppercase tracking-wider mb-3 flex justify-between">
+                    <span>Projected Artifacts</span>
+                    <span class="text-xs text-[#00ffcc] font-mono">{{ projected_artifacts|length }} artifacts</span>
+                </h3>
+                <div class="space-y-2 max-h-60 overflow-y-auto font-mono text-xs">
+                    {% for a in projected_artifacts %}
+                    <div class="border border-[#3d0066] p-2 flex justify-between items-center">
+                        <div>
+                            <div class="text-[#00ffcc] font-bold">{{ a.name }} ({{ a.artifact_id }})</div>
+                            <div class="text-[#9d00ff]">Revision: {{ a.latest_revision_id or "None" }}</div>
+                        </div>
+                        <div>
+                            <span class="px-2 py-0.5 text-[10px] uppercase rounded bg-purple-900 text-purple-200">
+                                {{ a.status }}
+                            </span>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-gray-500 italic p-2">No projected artifacts found.</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Projected Executions -->
+            <div class="bg-[#0a001a] border border-[#9d00ff] p-4 rounded">
+                <h3 class="text-sm font-bold text-[#ff00ff] uppercase tracking-wider mb-3 flex justify-between">
+                    <span>Projected Executions</span>
+                    <span class="text-xs text-[#00ffcc] font-mono">{{ projected_executions|length }} executions</span>
+                </h3>
+                <div class="space-y-2 max-h-60 overflow-y-auto font-mono text-xs">
+                    {% for e in projected_executions %}
+                    <div class="border border-[#3d0066] p-2 flex justify-between items-center">
+                        <div>
+                            <div class="text-[#ffff00] font-bold">{{ e.execution_id }}</div>
+                            <div class="text-[#9d00ff]">Node: {{ e.node_id }} | Entry: {{ e.entrypoint }}</div>
+                        </div>
+                        <div>
+                            <span class="px-2 py-0.5 text-[10px] uppercase rounded {% if e.outcome == "succeeded" %}bg-green-900 text-green-200{% else %}bg-yellow-900 text-yellow-200{% endif %}">
+                                {{ e.outcome }}
+                            </span>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-gray-500 italic p-2">No projected executions found.</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Command Catalog -->
+            <div class="bg-[#0a001a] border border-[#9d00ff] p-4 rounded">
+                <h3 class="text-sm font-bold text-[#ff00ff] uppercase tracking-wider mb-3 flex justify-between">
+                    <span>Command Catalog</span>
+                    <span class="text-xs text-[#00ffcc] font-mono">{{ catalog_commands|length }} commands</span>
+                </h3>
+                <div class="space-y-2 max-h-60 overflow-y-auto font-mono text-xs">
+                    {% for c in catalog_commands %}
+                    <div class="border border-[#3d0066] p-2 flex justify-between items-center">
+                        <div>
+                            <div class="text-[#ff00ff] font-bold">{{ c.name }}</div>
+                            <div class="text-[#9d00ff]">Kind: {{ c.implementation_kind }} | Entry: {{ c.entrypoint }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

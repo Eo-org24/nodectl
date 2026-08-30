@@ -189,3 +189,34 @@ async def tab_ledger(request: Request, user=Depends(require_user)):
 @router.get("/tab/config", response_class=HTMLResponse)
 async def tab_config(request: Request, user=Depends(require_user)):
     return templates.TemplateResponse(request, "config_tab.html", tab_context(request, active_tab="config"))
+
+
+def operations_context(request: Request) -> dict[str, object]:
+    from ..catalog import CommandCatalog
+    from ..projection import get_correlated_operation, get_projection_db, init_projection_db
+    init_projection_db()
+    catalog = getattr(request.app.state, "command_catalog", CommandCatalog())
+
+    with get_projection_db() as conn:
+        nodes = [dict(r) for r in conn.execute("SELECT * FROM projected_nodes ORDER BY display_name").fetchall()]
+        artifacts = [dict(r) for r in conn.execute("SELECT * FROM projected_artifacts ORDER BY name").fetchall()]
+        executions = [dict(r) for r in conn.execute("SELECT * FROM projected_executions ORDER BY started_at DESC LIMIT 50").fetchall()]
+        quarantines = [dict(r) for r in conn.execute("SELECT * FROM projected_quarantines ORDER BY quarantined_at DESC LIMIT 50").fetchall()]
+
+    correlated = get_correlated_operation()
+
+    context = template_context(request, active_tab="operations", read_only=True)
+    context.update({
+        "projected_nodes": nodes,
+        "projected_artifacts": artifacts,
+        "projected_executions": executions,
+        "projected_quarantines": quarantines,
+        "catalog_commands": catalog.list_commands(),
+        "correlated_operation": correlated,
+    })
+    return context
+
+
+@router.get("/tab/operations", response_class=HTMLResponse)
+async def tab_operations(request: Request, user=Depends(require_user)):
+    return templates.TemplateResponse(request, "operations_tab.html", operations_context(request))

@@ -15,7 +15,7 @@ Pinned peers:
   (`ad3753980b4510d755435571b28fb11bb434ab9a`)
 - `Eowerd24/VM-Factory@phase0-conformant-v2`
   (`4f8f577364fb2b2b3a17e780fa7cc7a601058d0d`)
-- shared contracts: `Eowerd24/ucc-contracts@v0.2.0`
+- shared contracts: `Eowerd24/ucc-contracts@v0.3.0`
 
 UCC work and pull requests target `Eo-org24/nodectl:ucc-integration`. The preserved
 `ucc-integration-premature-stage2` branch was based on void pre-reconciliation tags and is
@@ -27,6 +27,8 @@ audit evidence only; do not merge or cherry-pick it.
 - `backend/app.py` builds the application and wires routers plus services.
 - `backend/routers/` contains HTTP and WebSocket endpoints.
 - `backend/services/` contains SSH, transfer, host-key, and Git deploy-key logic.
+- `backend/ports/` contains real in-process adapters for `ArtifactPort` and `FactoryPort`.
+- `backend/projection.py` builds the disposable projection DB from event streams.
 - `backend/migrations/001_init.sql` creates the SQLite tables for transfer records, approved host keys, and Git credential metadata.
 
 ## Security Defaults
@@ -51,7 +53,7 @@ Build Python bytecode check:
 Run tests:
 
 ```bash
-.venv/bin/python -m pytest -q
+PYTHONPATH=.:third_party/ucc-contracts pytest -q
 ```
 
 Run the app locally:
@@ -98,34 +100,22 @@ The current backend maps those two configured accounts to roles in [`backend/aut
 
 ## UCC conformance
 
-Conforms to **ucc-contracts v0.2.0** (git tag, ucc-contracts is now its own repo), vendored at
+Conforms to **ucc-contracts v0.3.0** (git tag, ucc-contracts is now its own repo), vendored at
 `third_party/ucc-contracts/` (schemas, lifecycle transition tables, ID/hash/path
 primitives — no domain code). `tests/contracts/` asserts this repo's own
 (de)serialization and validation matches the pinned contracts exactly;
 bumping the vendored copy is deliberate and version-gated, never silent.
 
-## Standalone status and limitations
+## Stage-2 Integration Status
 
-This is a **UCC Stage-1 conformant standalone tool**. It runs and is tested on its own.
-It is *not* the UCC product and does not integrate with the other UCC repos yet.
-
-- **Shared contracts:** pinned to `ucc-contracts v0.2.0` (vendored under
-  `third_party/ucc-contracts/`, export set per its VENDOR-MANIFEST.md). Never edited locally.
-- **Placeholder entity IDs (D4):** `ucc.event` records carry `subject.id` values that are
-  **deterministic sha256-derived placeholders**, not canonical prefixed ULIDs. Real IDs
-  arrive with the record layer in Stage 2. **Do not build external references on them.**
-- **Events are dual-written:** the legacy ledger *and* a schema-conformant `ucc.event`
-  stream. Neither replaces the other yet.
-- **`producer_sequence`** is per-producer, not globally ordered, and not race-safe under
-  concurrent writers (matching the legacy ledgers).
-- **Fenced paths:** direct-infrastructure and shell paths are retained for standalone use
-  only, unreachable from any port (AST call-site tests). Not an integration surface.
-- **Domain schemas are not authored yet** (~26 records; standards reference §17). They gate
-  the vertical proof, not this baseline.
-- **Ports are stubs.** `ArtifactPort`/`FactoryPort` are consumed at `app.state.*_port`, but
-  every method refuses `DEPENDENCY_UNAVAILABLE` by design. No cross-module call is wired.
-- **`nodepanel` naming survives by design** in the SQLite filename, the `factory_user`
-  account, and `VALID_TOOL`'s legacy entry — a deliberate D5 transition window.
+- **Shared contracts:** pinned to `ucc-contracts v0.3.0` (vendored under
+  `third_party/ucc-contracts/`, export set per its VENDOR-MANIFEST.md).
+- **Canonical entity IDs (S2-5):** `ucc.event` records carry genuine owner-issued
+  canonical ULIDs (`act_`, `node_`, `op_`, etc.).
+- **Authoritative event stream (S2-6):** `ucc.event` stream is the authoritative write path.
+- **Disposable projection DB (S2-4):** rebuildable deterministically from event streams.
+- **Ports:** in-process adapters for `ArtifactPort` and `FactoryPort` wired at `app.state.*_port`.
+- **Rootless Container (S2-D):** Containerfile and docker-compose.yml support unprivileged execution.
 
 ## Additional Documentation
 

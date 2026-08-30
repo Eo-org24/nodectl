@@ -17,9 +17,9 @@ services:
       FACTORY_SSH_KEY_PATH: /run/secrets/factory_ssh_key
       VM_SSH_KEY_PATH: /run/secrets/vm_ssh_key
       BIND_HOST: 0.0.0.0
-      BIND_PORT: 420
+      BIND_PORT: 8420
     ports:
-      - "127.0.0.1:${NODEPANEL_HOST_PORT:-8000}:420"
+      - "127.0.0.1:${NODEPANEL_HOST_PORT:-8000}:8420"
     read_only: true
     tmpfs:
       - /tmp
@@ -28,17 +28,17 @@ services:
     cap_drop:
       - ALL
     volumes:
-      - ./data:/app/data
-      - ./staging:/app/staging
-      - ./inbox:/app/inbox
-      - ./ledger:/app/ledger
-      - ./events:/app/events
+      - ./data:/app/data:Z,U
+      - ./staging:/app/staging:Z,U
+      - ./inbox:/app/inbox:Z,U
+      - ./ledger:/app/ledger:Z,U
+      - ./events:/app/events:Z,U
     secrets:
       - factory_ssh_key
       - vm_ssh_key
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:420/healthz', timeout=3).read()"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8420/healthz', timeout=3).read()"]
       interval: 30s
       timeout: 5s
       retries: 3

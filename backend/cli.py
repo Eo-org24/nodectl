@@ -30,6 +30,11 @@ def build_parser() -> argparse.ArgumentParser:
     show.add_argument("--redacted", action="store_true")
 
     subparsers.add_parser("module-health", help="Print this module's ucc.module-registration health record.")
+
+    proj_parser = subparsers.add_parser("projection", help="Manage disposable projection database.")
+    proj_sub = proj_parser.add_subparsers(dest="proj_command", required=True)
+    proj_sub.add_parser("rebuild", help="Rebuild the projection database from event streams.")
+    proj_sub.add_parser("show", help="Show projected summary.")
     return parser
 
 
@@ -52,6 +57,24 @@ def main() -> int:
     if args.command == "module-health":
         print(json.dumps(diagnostics.module_health(settings), indent=2, sort_keys=True))
         return 0
+    if args.command == "projection":
+        from .projection import build_projection, get_projection_db, rebuild_projection
+        streams = [
+            settings.ucc_events_root / "ucc.jsonl",
+            settings.data_root.parent / "artifact-compiler" / "events" / "artifact-compiler.jsonl",
+            settings.data_root.parent / "vm-factory" / "events" / "vm-factory.jsonl",
+        ]
+        if args.proj_command == "rebuild":
+            count = rebuild_projection(streams)
+            print(json.dumps({"status": "ok", "projected_events": count}))
+            return 0
+        if args.proj_command == "show":
+            with get_projection_db() as conn:
+                nodes = conn.execute("SELECT count(*) as c FROM projected_nodes").fetchone()["c"]
+                artifacts = conn.execute("SELECT count(*) as c FROM projected_artifacts").fetchone()["c"]
+                executions = conn.execute("SELECT count(*) as c FROM projected_executions").fetchone()["c"]
+                print(json.dumps({"nodes": nodes, "artifacts": artifacts, "executions": executions}))
+            return 0
     return 1
 
 

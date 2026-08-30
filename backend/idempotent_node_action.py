@@ -19,7 +19,7 @@ from ucc_contracts.idempotency import (
 
 from .idempotency_store import IdempotencyStore, request_fingerprint
 from .ssh_client import run_factory_script
-from .ucc_events import deterministic_id, ucc_now_iso
+from .ucc_events import ucc_now_iso
 
 
 class IdempotencyConflictError(Exception):
@@ -70,7 +70,7 @@ async def run_node_action_idempotent(
     operation_id = new_id("op")
     correlation_id = new_id("corr")
 
-    if outcome == IdempotencyOutcome.REPLAY and stored.disposition == "unknown":
+    if outcome == IdempotencyOutcome.IN_FLIGHT or (outcome == IdempotencyOutcome.REPLAY and stored.disposition == "unknown"):
         raise OutcomeUnknownError(_outcome_unknown_problem(
             request_id=request_id, operation_id=operation_id,
             correlation_id=correlation_id))
@@ -87,7 +87,7 @@ async def run_node_action_idempotent(
         "request_id": request_id, "operation_id": operation_id, "correlation_id": correlation_id,
         "causation_id": None, "idempotency_key": idempotency_key,
         "request_fingerprint": fingerprint, "requested_at": ucc_now_iso(),
-        "requested_by": deterministic_id("act", f"actor:{actor_username}"),
+        "requested_by": new_id("act"),
         "operation_type": f"node.{action}", "payload": payload,
     }
     validate_document("request", request_doc)
@@ -109,7 +109,7 @@ async def run_node_action_idempotent(
         "result_id": new_id("res"), "request_id": request_id, "operation_id": operation_id,
         "correlation_id": correlation_id, "completed_at": ucc_now_iso(),
         "disposition": disposition,
-        "resource": {"kind": "node", "id": deterministic_id("node", f"node:{node_name}")},
+        "resource": {"kind": "node", "id": new_id("node")},
         "warnings": [],
     }
     validate_document("result", result_doc)
